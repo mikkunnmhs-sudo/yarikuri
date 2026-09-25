@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="やりくり">
+<title>やりくり</title>
+<style>
+body{font-family:-apple-system,sans-serif;margin:0;background:#f4f4f4;color:#222}
+.card{background:#fff;margin:10px;padding:14px;border-radius:12px;box-shadow:0 1px 3px #0002}
+.lbl{font-size:14px;color:#555}
+.hero{font-size:44px;font-weight:bold;line-height:1.15;margin-top:2px}
+.of{font-size:14px;color:#666;margin-bottom:4px}
+.bar{position:relative;height:20px;background:#ddd;border-radius:10px;overflow:hidden;margin:8px 0 4px}
+.fill{position:absolute;left:0;top:0;bottom:0}
+.line{position:absolute;top:0;bottom:0;width:3px;background:#000}
+.pct{font-size:12px;color:#666}
+.sig{font-weight:bold;margin-top:6px}
+.mid{font-size:19px;font-weight:bold;margin-top:12px}
+.small{font-size:13px;color:#666;margin-top:4px}
+.順調{color:#2e7d32}.注意{color:#e65100}.ピンチ{color:#c62828}
+.bg順調{background:#2e7d32}.bg注意{background:#ef6c00}.bgピンチ{background:#c62828}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+td{padding:5px 2px;border-bottom:1px solid #eee;vertical-align:top}
+.r{text-align:right;white-space:nowrap}
+.up{color:#c62828}.down{color:#2e7d32}
+.sum td{font-weight:bold;border-top:2px solid #ccc}
+.big2{font-size:22px;font-weight:bold}
+.sbtn{font-size:13px;padding:3px 8px}
+pre{white-space:pre-wrap;font-size:13px;margin:8px 0 0}
+summary{font-weight:bold}
+.tx{border-bottom:1px solid #eee;padding:8px 0}
+.top{display:flex;justify-content:space-between}
+select,input,button{font-size:15px;margin:3px 2px;padding:5px}
+.tag{font-size:12px;background:#ffe0b2;border-radius:4px;padding:1px 4px}
+#busy{display:none;position:fixed;top:8px;right:8px;background:#333;color:#fff;padding:4px 10px;border-radius:12px;font-size:12px;z-index:9}
+</style></head><body>
+<div id="busy">通信中…</div>
+<div class="card" id="login" style="display:none"><b>合言葉を入れてください</b><br>
+<input id="pw" style="width:200px" autocapitalize="off" autocomplete="off">
+<button onclick="login()">開く</button>
+<div style="font-size:12px;color:#666">設定シートの「アプリの合言葉」の値です。一度入れれば、このスマホが覚えます。</div></div>
+<div id="main">
+<div class="card">
+<div class="lbl">今月あと使える</div>
+<div class="hero" id="rest">読み込み中…</div>
+<div class="of" id="of"></div>
+<div class="bar"><div class="fill" id="fill"></div><div class="line" id="line"></div></div>
+<div class="pct" id="pct"></div>
+<div class="sig" id="sig"></div>
+<div class="mid" id="perday"></div>
+<div class="small" id="today"></div>
+<div class="small" id="note"></div>
+</div>
+<div class="card" id="bank"></div>
+<div class="card"><b>現金などの支出を記録</b><br>
+<input id="camt" type="number" inputmode="numeric" placeholder="金額" style="width:90px">
+<input id="cname" placeholder="お店" style="width:120px"><select id="ccat"></select>
+<button onclick="cash()">記録</button></div>
+<div class="card"><b>入金を記録（利息など）</b><br>
+<select id="iacc" onchange="accChg()"><option value="共有">共有口座に入金</option><option value="貯蓄入金">貯蓄口座に入金</option><option value="貯蓄出金">貯蓄口座から出金</option></select><br>
+<input id="iamt" type="number" inputmode="numeric" placeholder="金額" style="width:90px">
+<input id="iname" value="利息" style="width:120px">
+<button onclick="income()">記録</button><br>
+<label id="iaddw" class="small"><input type="checkbox" id="iadd"> 今月のやりくり費に足す（チェックなし＝口座の残高だけ増やす）</label></div>
+<div class="card" id="cats"></div>
+<div class="card" id="fixed"></div>
+<div class="card" id="list"></div>
+<div class="card"><details><summary>通知メールと同じ文章</summary><pre id="text"></pre></details></div>
+</div>
+<script>
+var API='https://script.google.com/macros/s/AKfycbwomkqdkTHYXHHL0aWNmfkm8TTSIx-Idm8lSG09fNMV9DlONcfVILu8-yhx5RZWXQMrhg/exec';
+var K=new URLSearchParams(location.search).get('k')||'';
+var D=null;
+function $(id){return document.getElementById(id);}
+function save(k){try{localStorage.setItem('yk',k);}catch(x){}}
+function saved(){try{return localStorage.getItem('yk')||'';}catch(x){return '';}}
+function busy(on){$('busy').style.display=on?'block':'none';}
+function call(fn,args,ok){
+  busy(true);
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:args})})
+    .then(function(r){return r.json();})
+    .then(function(j){busy(false);if(!j.ok){err(j.error);return;}ok(j.data);})
+    .catch(function(e){busy(false);err('通信できませんでした（'+e+'）');});
+}
+function askKey(msg){$('main').style.display='none';$('login').style.display='block';if(msg)alert(msg);}
+function login(){K=$('pw').value.trim();if(!K)return;$('login').style.display='none';$('main').style.display='block';load();}
+function start(){if(!K)K=saved();if(!K){askKey('');return;}load();}
+function load(){call('apiData',[K],function(j){save(K);show(j);});}
+function err(e){
+  var m=String((e&&e.message)||e);
+  if(m.indexOf('合言葉')>=0){try{localStorage.removeItem('yk');}catch(x){}K='';askKey('合言葉が違います。もう一度入れてください');return;}
+  alert('エラー：'+m);
+}
+function yen(n){return Math.round(n||0).toLocaleString('ja-JP')+'円';}
+function pct(x){return Math.round((x||0)*100);}
+function sgn(n){return n>0?'▲':(n<0?'▼':'±');}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function opts(list,v){return list.map(function(x){return '<option'+(x===v?' selected':'')+'>'+esc(x)+'</option>';}).join('');}
+function bankHTML(){
+  var S=D.貯蓄;
+  var h='<b>口座の残高</b><table>';
+  h+='<tr><td>共有口座（計算上）</td><td class="r">'+yen(D.実残高)+'</td></tr>';
+  if(S&&S.残高!==null){
+    h+='<tr><td>貯蓄口座<div class="small">'+esc(S.確認日)+' に入れた残高＋その後の出入り</div></td><td class="r">'+yen(S.残高)+'</td></tr></table>';
+    if(D.特別待ち)h+='<div class="small">補填待ち '+yen(D.特別待ち)+' を共有口座へ移すと、貯蓄口座は 約'+yen(S.残高-D.特別待ち)+'</div>';
+  }else{
+    h+='<tr><td>貯蓄口座</td><td class="r">まだ入力されていません</td></tr></table>';
+  }
+  h+='<button class="sbtn" onclick="setSave()">貯蓄口座の残高を入力</button>';
+  if(S&&S.最近&&S.最近.length){
+    h+='<div class="small">最近の動き<br>'+S.最近.map(function(x){
+      var z=x.種類==='残高'?'残高 '+yen(x.金額):x.種類+' '+(x.種類==='出金'?'−':'＋')+yen(Math.abs(x.金額));
+      return esc(x.日+' '+z+' '+x.内容);
+    }).join('<br>')+'</div>';
+  }
+  return h;
+}
+function catHTML(A){
+  if(!A)return '';
+  var h='<b>カテゴリ別（'+esc(D.月)+'1日〜今日）</b>';
+  h+='<div class="small">'+(A.先月あり?'右は先月の同じ時期（1〜'+A.今日+'日）とのちがい':'先月のデータがありません')+'</div><table>';
+  A.カテゴリ.forEach(function(c){
+    var d=A.先月あり?sgn(c.差)+yen(Math.abs(c.差))+(c.率!==null?'（'+(c.率>0?'+':'')+c.率+'%）':'（新しく増えた）'):'';
+    h+='<tr><td>'+esc(c.名前)+'</td><td class="r">'+yen(c.今月)+'</td><td class="r '+(c.差>0?'up':'down')+'">'+d+'</td></tr>';
+  });
+  var y=A.やりくり;
+  h+='<tr class="sum"><td>やりくり合計</td><td class="r">'+yen(y.今月)+'</td><td class="r '+(y.差>0?'up':'down')+'">'+(A.先月あり?sgn(y.差)+yen(Math.abs(y.差)):'')+'</td></tr></table>';
+  if(A.先月あり)h+='<div class="small">先月は1か月で '+yen(A.先月全体)+' でした</div>';
+  if(A.特別費)h+='<div class="small">特別費 '+yen(A.特別費)+'（やりくりには入れていません）</div>';
+  return h;
+}
+function fixHTML(F){
+  if(!F)return '';
+  var h='<b>今月の固定費</b><div class="big2">'+yen(F.合計)+'</div>';
+  var b=['支払い済み '+yen(F.済み),'これから '+yen(F.これから)];
+  if(F.取り置き)b.push('取り置き '+yen(F.取り置き));
+  h+='<div class="small">'+b.join(' ／ ')+'</div>';
+  if(F.先月分)h+='<div class="small">※ 今月引き落とされる分のうち '+yen(F.先月分)+' は先月までに取り置いた分なので、合計から引いています</div>';
+  h+='<table>';
+  var M={'済み':'✓','これから':'・','取り置き':'◇','通知待ち':'…','今月はなし':'－'};
+  F.一覧.forEach(function(x){
+    h+='<tr><td>'+(M[x.状態]||'')+' '+esc(x.項目)+'<div class="small">'+esc(x.説明)+'</div></td><td class="r">'+(x.金額?yen(x.金額):'')+'</td></tr>';
+  });
+  return h+'</table>';
+}
+function show(json){
+  D=JSON.parse(json);
+  var g=D.信号||'注意', dn=D.残日数||1;
+  var r=$('rest'); r.textContent=yen(D.残り); r.className='hero '+g;
+  $('of').textContent='／ '+yen(D.やりくり費)+' 中（'+D.月+'のやりくり費）';
+  var f=$('fill'); f.style.width=Math.max(0,Math.min(1,D.割合))*100+'%'; f.className='fill bg'+g;
+  $('line').style.left=Math.max(0,Math.min(1,D.目標))*100+'%';
+  $('pct').textContent='残り '+pct(D.割合)+'%　｜　今日の目標ライン '+pct(D.目標)+'%（黒い線）';
+  var s=$('sig'); s.className='sig '+g;
+  s.textContent=D.差>=0?'【順調】目標より '+yen(D.差)+' 余裕あり':'【'+g+'】目標より '+yen(-D.差)+' 使いすぎ';
+  $('perday').textContent=D.残り>0?'1日あたり 約'+yen(Math.floor(D.残り/dn))+'（月末まであと'+dn+'日）':'今月のやりくり費は残っていません';
+  $('today').textContent='今日の目安：あと '+yen(D.今日あと);
+  var n=[];
+  if(D.固定費&&D.固定費.取り置き)n.push('取り置き '+yen(D.固定費.取り置き)+'（来月引き落とし分。上の金額からは先に引いてあります）');
+  if(D.予備)n.push(D.残り<0?'予備費 '+yen(D.予備)+' から出している状態です':'予備費 '+yen(D.予備)+' は別にとってあります');
+  if(D.特別待ち)n.push('特別費の補填待ち '+yen(D.特別待ち));
+  $('note').innerHTML=n.map(esc).join('<br>');
+  $('bank').innerHTML=bankHTML();
+  $('cats').innerHTML=catHTML(D.集計);
+  $('fixed').innerHTML=fixHTML(D.固定費);
+  $('text').textContent=D.文;
+  $('ccat').innerHTML=opts(D.cats,'食費');
+  var h='<b>今月の取引</b>';
+  D.取引.forEach(function(t,i){
+    h+='<div class="tx"><div class="top"><span>'+esc(t.日)+' '+esc(t.メモ||t.店舗)+(t.未確定?' <span class="tag">未確定</span>':'')+'</span><b>'+yen(t.金額)+'</b></div>'+
+      '<select onchange="upd('+i+',{カテゴリ:this.value})">'+opts(D.cats,t.カテゴリ)+'</select>'+
+      '<select onchange="kubun('+i+',this.value)">'+opts(D.区分,t.区分)+'</select>'+
+      '<button onclick="amt('+i+')">金額</button>'+
+      (t.未確定?'<button onclick="upd('+i+',{確認:1})">この店でOK</button>':'')+
+      (t.区分==='特別費'?(t.補填?'<span class="tag">補填'+esc(t.補填)+'</span>':'<button onclick="hoten('+i+')">補填した</button>'):'')+
+      '</div>';
+  });
+  $('list').innerHTML=h;
+}
+function upd(i,c,m){var t=D.取引[i];call('apiUpdate',[K,D.ym,t.id,c,!!m],show);}
+function kubun(i,v){var m=(v==='特別費'||v==='やりくり')&&confirm('このお店を、次からも自動で「'+v+'」にしますか？');upd(i,{区分:v},m);}
+function hoten(i){var t=D.取引[i];if(confirm(yen(t.金額)+' を貯蓄口座から共有口座へ移しましたか？\n（貯蓄口座の残高からも引きます）'))upd(i,{補填:1});}
+function amt(i){var v=prompt('正しい金額',D.取引[i].金額);if(v!==null&&v!=='')upd(i,{金額:v});}
+function cash(){
+  var a=$('camt').value,n=$('cname').value;
+  if(!a||!n){alert('金額とお店を入れてください');return;}
+  call('apiCash',[K,a,n,$('ccat').value],function(j){$('camt').value='';$('cname').value='';show(j);});
+}
+function accChg(){$('iaddw').style.display=$('iacc').value==='共有'?'':'none';}
+function income(){
+  var c=$('iacc').value,a=$('iamt').value,n=$('iname').value.trim()||'入金';
+  if(!(Number(a)>0)){alert('金額をプラスの数字で入れてください');return;}
+  var add=c==='共有'&&$('iadd').checked;
+  call('apiIncome',[K,c,a,n,add],function(j){$('iamt').value='';$('iadd').checked=false;show(j);});
+}
+function setSave(){
+  var S=D&&D.貯蓄;
+  var v=prompt('貯蓄口座の今の残高（銀行アプリの数字）',S&&S.残高!==null?S.残高:'');
+  if(v===null||v==='')return;
+  call('apiSaving',[K,v],show);
+}
+start();
+</script></body></html>
