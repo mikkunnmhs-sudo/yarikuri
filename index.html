@@ -28,6 +28,7 @@ td{padding:5px 2px;border-bottom:1px solid #eee;vertical-align:top}
 .sum td{font-weight:bold;border-top:2px solid #ccc}
 .big2{font-size:22px;font-weight:bold}
 .sbtn{font-size:13px;padding:3px 8px}
+.orig{font-size:11px;color:#999}
 pre{white-space:pre-wrap;font-size:13px;margin:8px 0 0}
 summary{font-weight:bold}
 .tx{border-bottom:1px solid #eee;padding:8px 0}
@@ -169,9 +170,12 @@ function show(json){
   $('ccat').innerHTML=opts(D.cats,'食費');
   var h='<b>今月の取引</b>';
   D.取引.forEach(function(t,i){
-    h+='<div class="tx"><div class="top"><span>'+esc(t.日)+' '+esc(t.メモ||t.店舗)+(t.未確定?' <span class="tag">未確定</span>':'')+'</span><b>'+yen(t.金額)+'</b></div>'+
+    var name=t.メモ||t.店舗;
+    var orig=(t.メモ&&t.店舗&&t.メモ!==t.店舗)?'<div class="orig">明細：'+esc(t.店舗)+'</div>':'';
+    h+='<div class="tx"><div class="top"><span>'+esc(t.日)+' '+esc(name)+(t.未確定?' <span class="tag">未確定</span>':'')+orig+'</span><b>'+yen(t.金額)+'</b></div>'+
       '<select onchange="upd('+i+',{カテゴリ:this.value})">'+opts(D.cats,t.カテゴリ)+'</select>'+
       '<select onchange="kubun('+i+',this.value)">'+opts(D.区分,t.区分)+'</select>'+
+      '<button onclick="nm('+i+')">店名</button>'+
       '<button onclick="amt('+i+')">金額</button>'+
       (t.未確定?'<button onclick="upd('+i+',{確認:1})">この店でOK</button>':'')+
       (t.区分==='特別費'?(t.補填?'<span class="tag">補填'+esc(t.補填)+'</span>':'<button onclick="hoten('+i+')">補填した</button>'):'')+
@@ -181,6 +185,14 @@ function show(json){
 }
 function upd(i,c,m){var t=D.取引[i];call('apiUpdate',[K,D.ym,t.id,c,!!m],show);}
 function kubun(i,v){var m=(v==='特別費'||v==='やりくり')&&confirm('このお店を、次からも自動で「'+v+'」にしますか？');upd(i,{区分:v},m);}
+function nm(i){
+  var t=D.取引[i];
+  var v=prompt('正しいお店の名前'+(t.店舗?'\n（明細の名前：'+t.店舗+'）':''),t.メモ||t.店舗||'');
+  if(v===null)return;
+  v=v.trim();
+  if(!v){alert('お店の名前を入れてください');return;}
+  upd(i,{メモ:v.slice(0,30),確認:1});
+}
 function hoten(i){var t=D.取引[i];if(confirm(yen(t.金額)+' を貯蓄口座から共有口座へ移しましたか？\n（貯蓄口座の残高からも引きます）'))upd(i,{補填:1});}
 function amt(i){var v=prompt('正しい金額',D.取引[i].金額);if(v!==null&&v!=='')upd(i,{金額:v});}
 function cash(){
