@@ -155,7 +155,6 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 
 <!-- ===== ホーム ===== -->
 <section id="tab-home">
-<div class="card" id="tip"></div>
 <div class="card">
 <div class="chead"><span class="ico bg順調" id="heroIco">¥</span><span class="ct 順調" id="heroLbl">今月あと使える</span><span class="cr" id="month"></span></div>
 <div class="herow">
@@ -166,13 +165,15 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div class="rs" id="pct"></div>
 <div class="note" id="note"></div>
 </div>
+<div class="card" id="bank"></div>
 <div class="tiles">
 <div class="card"><div class="k">今日の目安（1日あたり）</div><div class="v" id="perday">--</div><div class="rs" id="perdaySub"></div></div>
 <div class="card"><div class="k">月末の着地予想</div><div class="v" id="land">--</div><div class="rs" id="landSub"></div></div>
 </div>
 <div class="card" id="ins"></div>
-<div class="card" id="bank"></div>
+<div class="card" id="tip"></div>
 </section>
+
 
 <!-- ===== 記録 ===== -->
 <section id="tab-rec" style="display:none">
@@ -342,21 +343,25 @@ function insHTML(){
 function bankHTML(){
   var S=D.貯蓄;
   var h=head('var(--blue)','¥','口座の残高');
-  h+='<div class="duo"><div><div class="k">共有口座</div><div class="v">'+num(D.実残高)+'</div><div class="rs">計算上の残高</div></div>';
+  h+='<div class="duo"><div><div class="k">共有口座</div><div class="v">'+num(D.実残高)+'</div></div>';
   if(S&&S.残高!==null&&S.残高!==undefined){
-    h+='<div><div class="k">貯蓄口座</div><div class="v">'+num(S.残高)+'</div><div class="rs">'+esc(S.確認日)+' の残高＋出入り</div></div></div>';
-    if(D.特別待ち)h+='<div class="note">補填待ち '+yen(D.特別待ち)+' を共有口座へ移すと、貯蓄口座は約 '+yen(S.残高-D.特別待ち)+'</div>';
+    h+='<div><div class="k">貯蓄口座</div><div class="v">'+num(S.残高)+'</div></div></div>';
   }else{
     h+='<div><div class="k">貯蓄口座</div><div class="v" style="font-size:17px;color:var(--sub)">未入力</div></div></div>';
   }
+  var more='';
+  if(S&&S.確認日)more+='<div class="rs">貯蓄口座は '+esc(S.確認日)+' の残高＋出入りで計算</div>';
+  if(D.特別待ち&&S&&S.残高!=null)more+='<div class="rs">補填待ち '+yen(D.特別待ち)+' を共有口座へ移すと、貯蓄口座は約 '+yen(S.残高-D.特別待ち)+'</div>';
   if(S&&S.最近&&S.最近.length){
-    h+='<div class="note">最近の動き<br>'+S.最近.map(function(x){
+    more+='<div class="rs" style="margin-top:6px">最近の動き<br>'+S.最近.map(function(x){
       var z=x.種類==='残高'?'残高 '+yen(x.金額):x.種類+' '+(x.種類==='出金'?'−':'＋')+yen(Math.abs(x.金額));
       return esc(x.日+' '+z+' '+x.内容);
     }).join('<br>')+'</div>';
   }
-  return h+'<button class="txtbtn" onclick="setSave()">貯蓄口座の残高を入力</button>';
+  more+='<button class="txtbtn" onclick="setSave()">貯蓄口座の残高を入力</button>';
+  return h+'<details style="margin-top:8px"><summary class="rs" style="font-weight:600">くわしく</summary>'+more+'</details>';
 }
+
 
 /* ---- レポートタブ ---- */
 function catHTML(A){
