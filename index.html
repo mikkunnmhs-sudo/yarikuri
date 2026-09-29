@@ -61,8 +61,9 @@ h1{margin:0;font-size:34px;font-weight:700;letter-spacing:-.02em}
 .up{color:var(--red)}.down{color:var(--green)}
 .crow{padding:10px 0;border-top:.5px solid var(--sep)}
 .top{display:flex;justify-content:space-between;gap:8px;font-size:15px}
-.cbar{height:6px;background:var(--fill);border-radius:3px;margin-top:6px;overflow:hidden}
-.cbar i{display:block;height:100%;border-radius:3px}
+.cbar,.gbar{height:6px;background:var(--fill);border-radius:3px;margin-top:6px;overflow:hidden}
+.cbar i,.gbar i{display:block;height:100%;border-radius:3px}
+.gbar i{background:var(--teal)}
 .group{background:var(--card);border-radius:12px;overflow:hidden;margin-bottom:12px}
 .row{display:flex;align-items:center;gap:10px;padding:11px 16px;min-height:44px;position:relative}
 .row+.row::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:.5px solid var(--sep)}
@@ -83,13 +84,19 @@ h1{margin:0;font-size:34px;font-weight:700;letter-spacing:-.02em}
 button{font:inherit;border:none;background:none;color:var(--blue);cursor:pointer;padding:0;touch-action:manipulation;transition:transform .1s ease-out,opacity .1s}
 button:active{transform:scale(.97);opacity:.6}
 .txtbtn{font-size:16px;padding:8px 0}
+.danger{color:var(--red)}
 .primary{display:block;width:100%;background:var(--blue);color:#fff;font-size:17px;font-weight:600;border-radius:12px;padding:14px;margin:10px 0 4px}
+.ghost{display:block;width:100%;background:rgba(0,122,255,.12);color:var(--blue);border-radius:12px;padding:12px;font-size:15px;font-weight:600;margin-top:8px;text-align:left}
+.aibtns{display:grid;gap:8px}
+.aibtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--fill);border-radius:12px;padding:12px;color:var(--text);font-size:15px;font-weight:600;cursor:pointer}
+.aibtn:active{opacity:.6}
 input,select{font:inherit;font-size:17px;color:var(--text);background:transparent;border:none;outline:none;-webkit-appearance:none;appearance:none}
 .fin{flex:1;text-align:right;min-width:0}
+.bin{width:100px;text-align:right;background:var(--fill);border-radius:8px;padding:6px 8px;font-size:16px;flex:none}
 .lk{width:84px;flex:none}
 .row select{color:var(--sub);text-align-last:right;flex:1;text-align:right}
 .chk{display:flex;gap:10px;align-items:flex-start;font-size:15px;padding:10px 0 0}
-.chk input{-webkit-appearance:checkbox;appearance:auto;width:20px;height:20px;margin-top:1px;flex:none}
+.chk input,.cb{-webkit-appearance:checkbox;appearance:auto;width:20px;height:20px;margin-top:2px;flex:none}
 .segc{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin-bottom:10px}
 .segc button{flex:1;padding:7px 4px;border-radius:7px;font-size:14px;font-weight:600;color:var(--text)}
 .segc button.on{background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.12)}
@@ -101,6 +108,10 @@ input,select{font:inherit;font-size:17px;color:var(--text);background:transparen
 .askbtn{width:34px;height:34px;border-radius:50%;background:var(--blue);color:#fff;font-size:18px;font-weight:700;flex:none}
 .q{margin:10px 0 0 auto;max-width:85%;width:fit-content;background:var(--blue);color:#fff;border-radius:16px 16px 4px 16px;padding:8px 12px;font-size:15px}
 .a{margin-top:8px;max-width:92%;width:fit-content;background:var(--fill);border-radius:16px 16px 16px 4px;padding:10px 12px;font-size:15px;line-height:1.55}
+.rep{border-top:.5px solid var(--sep);padding:10px 0}
+.rep summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
+.rep summary::-webkit-details-marker{display:none}
+.rep .body{font-size:15px;line-height:1.6;margin-top:8px;white-space:pre-wrap}
 .tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;padding:6px 8px calc(env(safe-area-inset-bottom) + 4px);background:var(--bar);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border-top:.5px solid var(--sep);z-index:15}
 .tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;color:var(--sub);font-size:10px;font-weight:600}
 .tabbar button.on{color:var(--blue)}
@@ -145,7 +156,6 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <!-- ===== ホーム ===== -->
 <section id="tab-home">
 <div class="card" id="tip"></div>
-
 <div class="card">
 <div class="chead"><span class="ico bg順調" id="heroIco">¥</span><span class="ct 順調" id="heroLbl">今月あと使える</span><span class="cr" id="month"></span></div>
 <div class="herow">
@@ -156,18 +166,25 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div class="rs" id="pct"></div>
 <div class="note" id="note"></div>
 </div>
-
 <div class="tiles">
 <div class="card"><div class="k">今日の目安（1日あたり）</div><div class="v" id="perday">--</div><div class="rs" id="perdaySub"></div></div>
 <div class="card"><div class="k">月末の着地予想</div><div class="v" id="land">--</div><div class="rs" id="landSub"></div></div>
 </div>
-
 <div class="card" id="ins"></div>
 <div class="card" id="bank"></div>
 </section>
 
 <!-- ===== 記録 ===== -->
 <section id="tab-rec" style="display:none">
+<div class="card">
+<div class="chead"><span class="ico aigrad">✦</span><span class="ct">AIアシスト</span><span class="cr">入力と整理をおまかせ</span></div>
+<div class="aibtns">
+<label class="aibtn"><input type="file" accept="image/*" style="display:none" onchange="pickReceipt(this)"><span class="ico" style="background:var(--green)">◎</span>レシートを撮って記録</label>
+<button class="aibtn" onclick="amazon()"><span class="ico" style="background:var(--orange)">a</span>Amazonの注文メールから品目をつける</button>
+<button class="aibtn" onclick="tidy()"><span class="ico" style="background:var(--blue)">✓</span>未確定のお店をAIで整理</button>
+</div>
+<div id="aires"></div>
+</div>
 <div class="card">
 <div class="segc"><button id="segOut" class="on" onclick="seg(0)">支出（現金など）</button><button id="segIn" onclick="seg(1)">入金（利息など）</button></div>
 <div id="fOut">
@@ -188,10 +205,8 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <button class="primary" onclick="income()">記録する</button>
 </div>
 </div>
-
 <div class="sec">特別費</div>
 <div class="card" id="special"></div>
-
 <div class="sec">今月の取引</div>
 <div id="list"></div>
 </section>
@@ -208,7 +223,6 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <button class="primary" onclick="buy()">チェックする</button>
 <div id="bres"></div>
 </div>
-
 <div class="card">
 <div class="chead"><span class="ico aigrad">✦</span><span class="ct">プランナーに相談</span><span class="cr">今月のデータを見て答えます</span></div>
 <div class="chips">
@@ -223,10 +237,24 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 
 <!-- ===== レポート ===== -->
 <section id="tab-rep" style="display:none">
+<div class="card">
+<div class="chead"><span class="ico aigrad">✦</span><span class="ct">AIレポート</span><span class="cr">自動：日曜20時・毎月1日</span></div>
+<div class="aibtns">
+<button class="aibtn" onclick="mkReport('週')"><span class="ico" style="background:var(--blue)">7</span>今週のふりかえりを作る</button>
+<button class="aibtn" onclick="mkReport('月')"><span class="ico" style="background:var(--purple)">月</span>先月のまとめを作る</button>
+</div>
+<div id="reps"></div>
+</div>
 <div class="card" id="cats"></div>
+<div class="card"><div id="budStatus"></div><div id="budEdit"></div></div>
 <div class="card" id="fixed"></div>
+<div class="card">
+<div class="chead"><span class="ico aigrad">✦</span><span class="ct">固定費の見直し</span><span class="cr">数か月に1回がおすすめ</span></div>
+<button class="ghost" onclick="fixReview()">AIに固定費を見直してもらう</button>
+<div id="fixres"></div>
+</div>
+<div class="card" id="goals"></div>
 <div class="card"><details><summary>通知メールと同じ文章</summary><pre id="text"></pre></details></div>
-<div class="rs" style="text-align:center">週・月のふりかえりと、来月の予算の提案は次の回で追加します</div>
 </section>
 
 <nav class="tabbar">
@@ -243,7 +271,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <script>
 var API='https://script.google.com/macros/s/AKfycbwomkqdkTHYXHHL0aWNmfkm8TTSIx-Idm8lSG09fNMV9DlONcfVILu8-yhx5RZWXQMrhg/exec';
 var K=new URLSearchParams(location.search).get('k')||'';
-var D=null, TAB='home', HIS=[], RING=163.4;
+var D=null,TAB='home',HIS=[],RING=163.4,AM=[],TD=[],REPS=null,BUD=null;
 var PAL=['var(--orange)','var(--blue)','var(--green)','var(--pink)','var(--purple)','var(--teal)','var(--red)'];
 var COL={red:'var(--red)',orange:'var(--orange)',blue:'var(--blue)',purple:'var(--purple)',green:'var(--green)'};
 function $(id){return document.getElementById(id);}
@@ -267,7 +295,7 @@ function start(){
 function load(){call('apiData',[K],function(j){save(K);show(j);});}
 function err(e){
   var m=String((e&&e.message)||e);
-  if(m.indexOf('合言葉')>=0){try{localStorage.removeItem('yk');}catch(x){}K='';askKey('合言葉が違います。もう一度入れてください');return;}
+  if(m.indexOf('合言葉が違います')>=0){try{localStorage.removeItem('yk');}catch(x){}K='';askKey('合言葉が違います。もう一度入れてください');return;}
   alert('エラー：'+m);
 }
 function yen(n){return Math.round(n||0).toLocaleString('ja-JP')+'円';}
@@ -283,11 +311,13 @@ function tab(t){
   ['home','rec','ask','rep'].forEach(function(x){$('tab-'+x).style.display=x===t?'':'none';$('tb-'+x).className=x===t?'on':'';});
   $('ttl').textContent={home:'やりくり',rec:'記録',ask:'相談',rep:'レポート'}[t];
   window.scrollTo(0,0);
+  if(t==='rep'&&REPS===null&&K)loadReps();
 }
 function goAdd(){tab('rec');seg(0);setTimeout(function(){$('camt').focus();},150);}
 
+/* ---- ホーム ---- */
 function tipHTML(){
-  var T=D.ひとこと, when='';
+  var T=D.ひとこと,when='';
   if(T&&T.時刻)when=(T.古い&&T.日?T.日.slice(5).replace('-','/')+' ':'')+T.時刻+' 更新';
   var h='<div class="chead"><span class="ico aigrad">✦</span><span class="ct">プランナーのひとこと</span><span class="cr">'+esc(when)+'</span></div>';
   if(T&&T.文)h+='<div class="tip">'+esc(T.文).replace(/\n/g,'<br>')+'</div>';
@@ -295,7 +325,6 @@ function tipHTML(){
   return h+'<button class="txtbtn" onclick="advice()">今の数字で言い直してもらう</button>';
 }
 function advice(){call('apiAdvice',[K],show);}
-
 function insHTML(){
   var L=D.気づき||[];
   var h=head('var(--orange)','!','気づき',L.length?L.length+'件':'');
@@ -307,7 +336,6 @@ function insHTML(){
   });
   return h+'</div>';
 }
-
 function bankHTML(){
   var S=D.貯蓄;
   var h=head('var(--blue)','¥','口座の残高');
@@ -327,27 +355,65 @@ function bankHTML(){
   return h+'<button class="txtbtn" onclick="setSave()">貯蓄口座の残高を入力</button>';
 }
 
+/* ---- レポートタブ ---- */
 function catHTML(A){
   if(!A)return '';
-  var y=A.やりくり;
+  var y=A.やりくり,M=D.目安||{};
   var h=head('var(--orange)','▦','カテゴリ別',esc(D.月)+' 1日〜今日');
   h+='<div class="v">'+num(y.今月)+'</div><div class="rs">やりくり合計'+(A.先月あり?'　先月の同じ時期（1〜'+A.今日+'日）より <span class="'+(y.差>0?'up':'down')+'">'+sgn(y.差)+yen(Math.abs(y.差))+'</span>':'')+'</div>';
   var mx=Math.max.apply(null,A.カテゴリ.map(function(c){return c.今月;}).concat([1]));
   h+='<div style="margin-top:10px">';
   A.カテゴリ.forEach(function(c,i){
+    var m=M[c.名前],over=m&&c.今月>m;
+    var w=m?Math.min(100,c.今月/m*100):c.今月/mx*100;
     var d=A.先月あり?sgn(c.差)+yen(Math.abs(c.差))+(c.率!==null?'（'+(c.率>0?'+':'')+c.率+'%）':'（新しく増えた）'):'';
-    h+='<div class="crow"><div class="top"><span>'+esc(c.名前)+'</span><b>'+yen(c.今月)+'</b></div>'+
-      '<div class="cbar"><i style="width:'+Math.max(2,c.今月/mx*100)+'%;background:'+PAL[i%PAL.length]+'"></i></div>'+
+    h+='<div class="crow"><div class="top"><span>'+esc(c.名前)+'</span><b'+(over?' class="up"':'')+'>'+yen(c.今月)+(m?'<span style="font-weight:400;color:var(--sub);font-size:13px"> / '+yen(m)+'</span>':'')+'</b></div>'+
+      '<div class="cbar"><i style="width:'+Math.max(2,w)+'%;background:'+(over?'var(--red)':PAL[i%PAL.length])+'"></i></div>'+
+      (m?'<div class="rs'+(over?' up':'')+'">'+(over?'目安を '+yen(c.今月-m)+' オーバー':'目安まで あと '+yen(m-c.今月))+'</div>':'')+
       (d?'<div class="rs '+(c.差>0?'up':'down')+'">先月比 '+d+'</div>':'')+'</div>';
+  });
+  Object.keys(M).forEach(function(n){
+    if(!A.カテゴリ.some(function(c){return c.名前===n;}))
+      h+='<div class="crow"><div class="top"><span>'+esc(n)+'</span><b>0円<span style="font-weight:400;color:var(--sub);font-size:13px"> / '+yen(M[n])+'</span></b></div><div class="cbar"><i style="width:2%;background:var(--green)"></i></div></div>';
   });
   h+='</div>';
   var n=[];
   if(A.先月あり)n.push('先月は1か月で '+yen(A.先月全体)+' でした');
-  if(A.特別費)n.push('特別費 '+yen(A.特別費)+'（やりくりには入れていません）');
+  if(A.特別費)
+
+  n.push('特別費 '+yen(A.特別費)+'（やりくりには入れていません）');
   if(n.length)h+='<div class="note">'+n.map(esc).join('<br>')+'</div>';
   return h;
 }
-
+function budHTML(){
+  var M=D.目安||{},ks=Object.keys(M),sum=0;ks.forEach(function(c){sum+=M[c];});
+  var h=head('var(--green)','◎','カテゴリ別の目安',ks.length?'合計 '+yen(sum):'');
+  if(!ks.length)h+='<div class="rs">まだ決めていません。AIが過去3か月の実績から提案します。</div>';
+  else h+='<div class="rs">上の「カテゴリ別」に目安が表示されます。やりくり費 '+yen(D.やりくり費)+(sum>D.やりくり費?' を '+yen(sum-D.やりくり費)+' 超えています':' の中に収まっています')+'</div>';
+  return h+'<button class="ghost" onclick="budPlan()">AIに目安を提案してもらう</button>';
+}
+function budPlan(){
+  $('budEdit').innerHTML='<div class="rs" style="margin-top:12px">AIが考えています…（30秒ほど）</div>';
+  call('apiBudgetPlan',[K],function(j){
+    BUD=JSON.parse(j);
+    var h='<div class="k" style="margin-top:12px">AIの案（'+BUD.月数+'か月の実績から。金額は直せます）</div>';
+    if(BUD.コメント)h+='<div class="a" style="max-width:100%">'+esc(BUD.コメント)+'</div>';
+    h+='<div class="list">';
+    BUD.案.forEach(function(x,i){
+      h+='<div class="row"><div class="grow"><div class="rt2">'+esc(x.カテゴリ)+'</div><div class="rs">平均 '+yen(x.平均)+'・今月 '+yen(x.今月)+(x.理由?'・'+esc(x.理由):'')+'</div></div><input class="bin" id="bd'+i+'" type="number" inputmode="numeric" value="'+x.目安+'" oninput="budSum()"></div>';
+    });
+    h+='</div><div class="rs" id="bdsum"></div><button class="primary" onclick="budSave()">この目安を使う</button>';
+    $('budEdit').innerHTML=h;budSum();
+  },function(){$('budEdit').innerHTML='';});
+}
+function budSum(){
+  var s=0;BUD.案.forEach(function(x,i){s+=Number($('bd'+i).value)||0;});
+  $('bdsum').innerHTML='合計 '+yen(s)+' ／ やりくり費 '+yen(BUD.合計目標)+(s>BUD.合計目標?' <span class="up">（'+yen(s-BUD.合計目標)+' オーバー）</span>':'');
+}
+function budSave(){
+  var L=BUD.案.map(function(x,i){return {カテゴリ:x.カテゴリ,目安:Number($('bd'+i).value)||0};}).filter(function(x){return x.目安>0;});
+  call('apiBudgetSave',[K,L],function(j){$('budEdit').innerHTML='';show(j);alert('目安を保存しました');});
+}
 function fixHTML(F){
   if(!F)return '';
   var h=head('var(--pink)','≡','今月の固定費');
@@ -363,7 +429,56 @@ function fixHTML(F){
   });
   return h+'</div>';
 }
+function fixReview(){
+  $('fixres').innerHTML='<div class="rs" style="margin-top:12px">AIが見直しています…（30秒ほど）</div>';
+  call('apiFixReview',[K],function(j){
+    var R=JSON.parse(j);
+    $('fixres').innerHTML='<div class="a" style="max-width:100%;white-space:pre-wrap">'+esc(R.文)+'</div>';
+    REPS=R.レポート;repsRender();
+  },function(){$('fixres').innerHTML='';});
+}
+function goalsHTML(){
+  var G=D.目標||[];
+  var h=head('var(--teal)','★','目標と予定','先にわかっている出費');
+  if(!G.length)h+='<div class="rs">旅行や健康診断など、先にわかっている出費を入れておくと、毎月いくら残せばいいかを計算します。</div>';
+  h+='<div class="list">';
+  G.forEach(function(g,i){
+    var st=g.不足<=0?'達成！':(g.過ぎた?'期限を過ぎています・あと '+yen(g.不足):(g.毎月?'毎月 '+yen(g.毎月)+' 残す（あと'+g.月数+'か月）':'あと '+yen(g.不足)));
+    h+='<div class="row tap" onclick="goalEdit('+i+')"><div class="grow"><div class="top"><span class="rt2">'+esc(g.名前)+'</span><span class="amt" style="font-size:15px">'+yen(g.今の額)+' / '+yen(g.目標額)+'</span></div>'+
+      '<div class="gbar"><i style="width:'+Math.max(2,g.割合*100)+'%"></i></div>'+
+      '<div class="rs">'+(g.期限?'期限 '+esc(g.期限)+'・':'')+st+'</div></div><span class="chev">›</span></div>';
+  });
+  return h+'</div><button class="ghost" onclick="goalEdit(-1)">＋ 目標・予定を追加</button>';
+}
+function goalEdit(i){
+  var g=i>=0?D.目標[i]:{id:'',名前:'',目標額:'',期限:'',今の額:0};
+  var h='<div class="shead"><button class="txtbtn" onclick="closeSheet()">キャンセル</button><b>'+(i>=0?'目標を編集':'目標・予定を追加')+'</b><span class="sp"></span></div>';
+  h+='<div class="group">'+
+    '<label class="row"><span class="lk">名前</span><input id="gn" class="fin" placeholder="例：沖縄旅行" value="'+esc(g.名前)+'"></label>'+
+    '<label class="row"><span class="lk">目標額</span><input id="ga" class="fin" type="number" inputmode="numeric" value="'+esc(g.目標額)+'"></label>'+
+    '<label class="row"><span class="lk">期限</span><input id="gd" class="fin" type="month" value="'+esc(g.期限)+'"></label>'+
+    '<label class="row"><span class="lk">今の額</span><input id="gc" class="fin" type="number" inputmode="numeric" value="'+esc(g.今の額)+'"></label></div>';
+  h+='<div class="rs">「今の額」は、この目標のためにもう貯めた金額です。貯まったら更新してください。</div>';
+  h+='<button class="primary" onclick="goalSave(\''+esc(g.id)+'\')">保存する</button>';
+  if(i>=0)h+='<button class="txtbtn danger" style="width:100%" onclick="goalDel(\''+esc(g.id)+'\')">この目標を消す</button>';
+  $('txBody').innerHTML=h;openSheet('txSheet');
+}
+function goalSave(id){call('apiGoalSave',[K,{id:id,名前:$('gn').value,目標額:$('ga').value,期限:$('gd').value,今の額:$('gc').value}],show);}
+function goalDel(id){if(confirm('この目標を消しますか？'))call('apiGoalDelete',[K,id],show);}
+function loadReps(){call('apiReports',[K],function(j){REPS=JSON.parse(j);repsRender();});}
+function repsRender(){
+  var L=REPS||[];
+  if(!L.length){$('reps').innerHTML='<div class="rs" style="margin-top:10px">まだレポートはありません</div>';return;}
+  $('reps').innerHTML='<div style="margin-top:10px">'+L.map(function(r,i){
+    return '<details class="rep"'+(i===0?' open':'')+'><summary><span class="rt2">'+esc(r.種類)+'　'+esc(r.期間)+'</span><span class="rs">'+esc(r.日時)+'</span></summary><div class="body">'+esc(r.本文)+'</div></details>';
+  }).join('')+'</div>';
+}
+function mkReport(t){
+  $('reps').insertAdjacentHTML('afterbegin','<div class="rs" id="repwait" style="margin-top:10px">AIが書いています…（30秒ほど）</div>');
+  call('apiReport',[K,t],function(j){REPS=JSON.parse(j);repsRender();},function(){var w=$('repwait');if(w)w.remove();});
+}
 
+/* ---- 記録タブ ---- */
 function txRow(t,i){
   var name=t.メモ||t.店舗||'（名前なし）';
   var h='<div class="row tap" onclick="openTx('+i+')"><div class="grow"><div class="rt">'+esc(name)+
@@ -374,11 +489,10 @@ function txRow(t,i){
   h+='<div class="rs">'+esc(t.日)+'・'+esc(t.カテゴリ)+(t.区分&&t.区分!=='やりくり'&&t.区分!=='特別費'?'・'+esc(t.区分):'')+'</div>';
   return h+'</div><div class="amt">'+yen(t.金額)+'</div><span class="chev">›</span></div>';
 }
-
 function show(json){
   D=JSON.parse(json);
   closeSheet();
-  var g=D.信号||'注意', dn=D.残日数||1, P=D.予測||{};
+  var g=D.信号||'注意',dn=D.残日数||1,P=D.予測||{};
   var ratio=Math.max(0,Math.min(1,D.割合||0));
   $('tip').innerHTML=tipHTML();
   $('heroIco').className='ico bg'+g;
@@ -386,16 +500,16 @@ function show(json){
   $('month').textContent=D.月||'';
   $('rest').innerHTML=num(D.残り);
   $('of').textContent=yen(D.やりくり費)+' 中（やりくり費）';
-  var s=$('sig'); s.className='pill bg'+g;
+  var s=$('sig');s.className='pill bg'+g;
   s.textContent=D.差>=0?'順調・目標より '+yen(D.差)+' 余裕':g+'・目標より '+yen(-D.差)+' 使いすぎ';
-  var rf=$('ringFg'); rf.setAttribute('class','fg s'+g); rf.style.strokeDashoffset=RING*(1-ratio);
+  var rf=$('ringFg');rf.setAttribute('class','fg s'+g);rf.style.strokeDashoffset=RING*(1-ratio);
   $('ringPct').textContent=pct(D.割合)+'%';
-  var f=$('fill'); f.style.width=ratio*100+'%'; f.className='fill bg'+g;
+  var f=$('fill');f.style.width=ratio*100+'%';f.className='fill bg'+g;
   $('line').style.left=Math.max(0,Math.min(1,D.目標))*100+'%';
   $('pct').textContent='残り '+pct(D.割合)+'%　縦の線＝今日の目標ライン '+pct(D.目標)+'%';
   $('perday').innerHTML=num(D.今日あと);
   $('perdaySub').textContent='月末まであと'+dn+'日';
-  $('land').innerHTML=num(P.着地); $('land').className='v '+(P.着地<0?'ピンチ':'順調');
+  $('land').innerHTML=num(P.着地);$('land').className='v '+(P.着地<0?'ピンチ':'順調');
   $('landSub').textContent=(P.着地<0?'足りなくなるペース':'残るペース')+'（1日約'+yen(P.平均)+'）'+(P.参考?'・月初なので参考':'');
   var n=[];
   if(D.固定費&&D.固定費.取り置き)n.push('取り置き '+yen(D.固定費.取り置き)+'（来月引き落とし分。上の金額からは先に引いてあります）');
@@ -404,10 +518,12 @@ function show(json){
   $('ins').innerHTML=insHTML();
   $('bank').innerHTML=bankHTML();
   $('cats').innerHTML=catHTML(D.集計);
+  $('budStatus').innerHTML=budHTML();
   $('fixed').innerHTML=fixHTML(D.固定費);
+  $('goals').innerHTML=goalsHTML();
   $('text').textContent=D.文||'';
   $('ccat').innerHTML=opts(D.cats,'食費');
-  var sp=[], rows=[], spSum=0;
+  var sp=[],rows=[],spSum=0;
   (D.取引||[]).forEach(function(t,i){
     if(t.区分==='特別費'){sp.push(txRow(t,i));spSum+=Number(t.金額)||0;}else rows.push(txRow(t,i));
   });
@@ -416,7 +532,6 @@ function show(json){
     (sp.length?'<div class="list" style="margin-top:6px">'+sp.join('')+'</div>':'<div class="rs" style="margin-top:6px">今月の特別費はまだありません</div>');
   $('list').innerHTML='<div class="group">'+(rows.length?rows.join(''):'<div class="row"><span class="rs">まだ取引がありません</span></div>')+'</div>';
 }
-
 function openSheet(id){$('scrim').classList.add('on');$(id).classList.add('on');}
 function closeSheet(){$('scrim').classList.remove('on');$('txSheet').classList.remove('on');}
 function seg(m){
@@ -425,15 +540,15 @@ function seg(m){
   accChg();
 }
 function openTx(i){
-  var t=D.取引[i], name=t.メモ||t.店舗;
+  var t=D.取引[i],name=t.メモ||t.店舗;
   var h='<div class="shead"><button class="txtbtn" onclick="closeSheet()">閉じる</button><b>取引の詳細</b><span class="sp"></span></div>';
   h+='<div class="sbig">'+num(t.金額)+'</div><div class="scap">'+esc(name)+
     (t.メモ&&t.店舗&&t.メモ!==t.店舗?'<br><span style="font-size:12px">明細：'+esc(t.店舗)+'</span>':'')+'<br>'+esc(t.日)+'</div>';
   h+='<div class="group"><div class="row tap" onclick="item('+i+')"><span class="lk">何を買った</span><span class="grow" style="text-align:right;color:'+(t.品目?'var(--text)':'var(--sub)')+'">'+esc(t.品目||'入力する')+'</span><span class="chev">›</span></div>'+
-     '<label class="row"><span class="lk">カテゴリ</span><select onchange="upd('+i+',{カテゴリ:this.value})">'+opts(D.cats,t.カテゴリ)+'</select></label>'+
-     '<label class="row"><span class="lk">区分</span><select onchange="kubun('+i+',this.value)">'+opts(D.区分,t.区分)+'</select></label></div>';
+    '<label class="row"><span class="lk">カテゴリ</span><select onchange="upd('+i+',{カテゴリ:this.value})">'+opts(D.cats,t.カテゴリ)+'</select></label>'+
+    '<label class="row"><span class="lk">区分</span><select onchange="kubun('+i+',this.value)">'+opts(D.区分,t.区分)+'</select></label></div>';
   h+='<div class="group"><div class="row tap" onclick="nm('+i+')"><span class="grow" style="color:var(--blue)">お店の名前を直す</span><span class="chev">›</span></div>'+
-     '<div class="row tap" onclick="amt('+i+')"><span class="grow" style="color:var(--blue)">金額を直す</span><span class="chev">›</span></div></div>';
+    '<div class="row tap" onclick="amt('+i+')"><span class="grow" style="color:var(--blue)">金額を直す</span><span class="chev">›</span></div></div>';
   if(t.未確定)h+='<button class="primary" onclick="upd('+i+',{確認:1})">この店でOK</button>';
   if(t.区分==='特別費')h+=t.補填?'<div class="scap">補填済み：'+esc(t.補填)+'</div>':'<button class="primary" style="background:var(--purple)" onclick="hoten('+i+')">貯蓄口座から補填した</button>';
   $('txBody').innerHTML=h;
@@ -475,6 +590,8 @@ function setSave(){
   if(v===null||v==='')return;
   call('apiSaving',[K,v],show);
 }
+
+/* ---- 相談タブ ---- */
 function buy(){
   var a=$('bamt').value,n=$('bname').value.trim(),w=$('bway').value;
   if(!(Number(a)>0)){alert('金額を入れてください');return;}
@@ -490,14 +607,97 @@ function buy(){
   },function(){$('bres').innerHTML='';});
 }
 function ask(q){
-  q=(q||$('aq').value).trim(); if(!q)return;
+  q=(q||$('aq').value).trim();if(!q)return;
   $('aq').value='';
-  var old=$('thinking'); if(old){old.textContent='（答えられませんでした）';old.removeAttribute('id');}
+  var old=$('thinking');if(old){old.textContent='（答えられませんでした）';old.removeAttribute('id');}
   $('qa').insertAdjacentHTML('beforeend','<div class="q">'+esc(q)+'</div><div class="a" id="thinking">考え中…</div>');
   call('apiAsk',[K,q,HIS],function(a){
-    var t=$('thinking'); t.removeAttribute('id'); t.innerHTML=esc(a).replace(/\n/g,'<br>');
-    HIS.push({q:q,a:a}); if(HIS.length>4)HIS.shift();
+    var t=$('thinking');t.removeAttribute('id');t.innerHTML=esc(a).replace(/\n/g,'<br>');
+    HIS.push({q:q,a:a});if(HIS.length>4)HIS.shift();
   },function(){var t=$('thinking');if(t){t.textContent='（答えられませんでした）';t.removeAttribute('id');}});
+}
+
+/* ---- AIアシスト ---- */
+function aimsg(m){$('aires').innerHTML='<div class="rs" style="margin-top:12px">'+m+'</div>';}
+function pickReceipt(inp){
+  var f=inp.files&&inp.files[0];inp.value='';if(!f||!D)return;
+  var img=new Image(),url=URL.createObjectURL(f);
+  img.onload=function(){
+    var s=Math.min(1,1600/Math.max(img.width,img.height));
+    var c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+    var b64=c.toDataURL('image/jpeg',0.8).split(',')[1];
+    aimsg('レシートを読んでいます…（10〜30秒）');
+    call('apiReceipt',[K,b64,'image/jpeg',D.cats],function(j){showReceipt(JSON.parse(j));},function(){$('aires').innerHTML='';});
+  };
+  img.onerror=function(){alert('写真を開けませんでした');};
+  img.src=url;
+}
+function showReceipt(R){
+  if(!R.読めた){aimsg('レシートを読み取れませんでした。明るい場所で、レシート全体が入るように撮り直してください。');return;}
+  var h='<div class="k" style="margin-top:12px">読み取り結果（まちがいは直せます）</div><div class="list">'+
+    '<label class="row"><span class="lk">金額</span><input id="ramt" class="fin" type="number" inputmode="numeric" value="'+esc(R.合計)+'"></label>'+
+    '<label class="row"><span class="lk">お店</span><input id="rname" class="fin" value="'+esc(R.店舗)+'"></label>'+
+    '<label class="row"><span class="lk">カテゴリ</span><select id="rcat">'+opts(D.cats,R.カテゴリ)+'</select></label>'+
+    '<label class="row"><span class="lk">何を</span><input id="ritem" class="fin" value="'+esc(R.品目)+'"></label></div>';
+  if(R.日付)h+='<div class="rs">レシートの日付：'+esc(R.日付)+'（現金で記録すると、今日の日付になります）</div>';
+  var M=(D.取引||[]).map(function(t,i){return {t:t,i:i};}).filter(function(x){return Number(x.t.金額)===Number(R.合計)&&x.t.区分!=='調整';}).slice(0,3);
+  if(M.length){
+    h+='<div class="rs" style="margin-top:10px">カードで払った場合は、すでにある取引に品目だけをつけてください（二重記録を防ぐため）</div>';
+    M.forEach(function(x){h+='<button class="ghost" onclick="attach('+x.i+')">「'+esc(x.t.メモ||x.t.店舗)+'　'+esc(x.t.日)+'」に品目をつける</button>';});
+  }
+  h+='<button class="primary" onclick="receiptSave()">現金の支出として記録する</button>';
+  $('aires').innerHTML=h;
+}
+function attach(i){
+  var t=D.取引[i],it=$('ritem').value.trim();
+  if(!it){alert('何を買ったかを入れてください');return;}
+  call('apiItems',[K,D.ym,[{id:t.id,品目:it}]],function(j){show(j);aimsg('品目をつけました');});
+}
+function receiptSave(){
+  var a=$('ramt').value,n=$('rname').value.trim(),c=$('rcat').value,it=$('ritem').value.trim();
+  if(!(Number(a)>0)||!n){alert('金額とお店を入れてください');return;}
+  var old={};(D.取引||[]).forEach(function(t){old[t.id]=1;});
+  call('apiCash',[K,a,n,c],function(j){
+    show(j);aimsg('記録しました');
+    var nw=(D.取引||[]).filter(function(t){return !old[t.id]&&Number(t.金額)===Number(a);})[0];
+    if(it&&nw)call('apiItems',[K,D.ym,[{id:nw.id,品目:it}]],show);
+  });
+}
+function amazon(){
+  aimsg('Amazonの注文メールを読んでいます…（30秒ほど）');
+  call('apiAmazon',[K],function(j){
+    var R=JSON.parse(j);AM=R.案||[];
+    if(!AM.length){aimsg(esc(R.メッセージ||'案はありません'));return;}
+    var h='<div class="k" style="margin-top:12px">AIの案（チェックしたものだけ反映）</div><div class="list">';
+    AM.forEach(function(x,i){
+      h+='<label class="row"><input type="checkbox" class="cb" id="am'+i+'"'+(x.確信==='低'?'':' checked')+'><div class="grow"><div class="rt2">'+esc(x.品目)+'</div><div class="rs">'+esc(x.名前)+'・'+esc(x.日)+'・'+yen(x.金額)+(x.確信==='低'?'・自信なし':'')+'</div></div></label>';
+    });
+    $('aires').innerHTML=h+'</div><button class="primary" onclick="amazonApply()">チェックしたものを反映</button>';
+  },function(){$('aires').innerHTML='';});
+}
+function amazonApply(){
+  var L=AM.filter(function(x,i){return $('am'+i).checked;}).map(function(x){return {id:x.id,品目:x.品目};});
+  if(!L.length){alert('チェックがありません');return;}
+  call('apiItems',[K,D.ym,L],function(j){show(j);aimsg(L.length+'件に品目をつけました');});
+}
+function tidy(){
+  aimsg('AIが未確定のお店を整理しています…');
+  call('apiTidy',[K],function(j){
+    var R=JSON.parse(j);TD=R.案||[];
+    if(!TD.length){aimsg(esc(R.メッセージ||'案はありません'));return;}
+    var h='<div class="k" style="margin-top:12px">AIの案（チェックしたものだけ反映）</div><div class="list">';
+    TD.forEach(function(x,i){
+      h+='<label class="row"><input type="checkbox" class="cb" id="td'+i+'"'+(x.確信==='低'?'':' checked')+'><div class="grow"><div class="rt2">'+esc(x.名前)+'　<span style="font-weight:400;color:var(--sub);font-size:13px">'+esc(x.カテゴリ)+'</span></div><div class="tiny">明細：'+esc(x.明細)+'</div><div class="rs">'+esc(x.日)+'・'+yen(x.金額)+(x.確信==='低'?'・自信なし':'')+'</div></div></label>';
+    });
+    $('aires').innerHTML=h+'</div><button class="primary" onclick="tidyApply()">チェックしたものを反映</button>';
+  },function(){$('aires').innerHTML='';});
+}
+function tidyApply(){
+  var L=TD.filter(function(x,i){return $('td'+i).checked;}).map(function(x){return {id:x.id,名前:x.名前,カテゴリ:x.カテゴリ};});
+  if(!L.length){alert('チェックがありません');return;}
+  aimsg('反映しています…（'+L.length+'件。少し時間がかかります）');
+  call('apiTidyApply',[K,D.ym,L],function(j){show(j);aimsg(L.length+'件を反映しました');});
 }
 start();
 </script></body></html>
