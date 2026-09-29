@@ -160,6 +160,15 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 .wday .mx .top{font-size:14px;padding:3px 0}
 .wcmp{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;margin-top:10px;padding-top:10px;border-top:.5px solid var(--sep)}
 .wcmp b{font-variant-numeric:tabular-nums;text-align:right}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}
+#dlg.on{display:flex}
+#dlg .box{background:var(--card);border-radius:14px;width:100%;max-width:340px;padding:18px 16px 12px}
+#dlg .dt{font-size:17px;font-weight:600;text-align:center}
+#dlg .dn{font-size:13px;color:var(--sub);text-align:center;margin-top:4px;white-space:pre-wrap}
+#dlg input{width:100%;box-sizing:border-box;margin-top:12px;font-size:17px;padding:10px 12px;border:.5px solid var(--sep);border-radius:10px;background:var(--bg);color:var(--text)}
+#dlg .db{display:flex;gap:8px;margin-top:14px}
+#dlg .db button{flex:1;font-size:17px;padding:11px 0;border-radius:10px;border:0;background:var(--fill);color:var(--blue);cursor:pointer}
+#dlg .db .ok{background:var(--blue);color:#fff;font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 <div id="busy">通信中…</div>
@@ -293,6 +302,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 </div>
 
 <div id="scrim" onclick="closeSheet()"></div>
+<div id="dlg" onclick="if(event.target===this)dlgClose()"><div class="box"><div class="dt" id="dlgT"></div><div class="dn" id="dlgN"></div><input id="dlgI"><div class="db"><button id="dlgC" onclick="dlgClose()">キャンセル</button><button class="ok" id="dlgO">OK</button></div></div></div>
 <div class="sheet" id="txSheet"><div class="grab"></div><div id="txBody"></div></div>
 
 <script>
@@ -552,7 +562,7 @@ function goalEdit(i){
   $('txBody').innerHTML=h;openSheet('txSheet');
 }
 function goalSave(id){call('apiGoalSave',[K,{id:id,名前:$('gn').value,目標額:$('ga').value,期限:$('gd').value,今の額:$('gc').value}],show);}
-function goalDel(id){if(confirm('この目標を消しますか？'))call('apiGoalDelete',[K,id],show);}
+function goalDel(id){yesNo('この目標を消しますか？','',function(ok){if(ok)call('apiGoalDelete',[K,id],show);},'消す','やめる');}
 function loadReps(){call('apiReports',[K],function(j){REPS=JSON.parse(j);repsRender();});}
 function repsRender(){
   var L=REPS||[];
@@ -643,24 +653,45 @@ function openTx(i){
   $('txBody').innerHTML=h;
   openSheet('txSheet');
 }
+/* ---- 入力ダイアログ（prompt/confirm の代わり。どのブラウザでも動く） ---- */
+var DLGCB=null;
+function dlgOpen(t,n,input,okText,cancelText,cb){
+  $('dlgT').textContent=t;$('dlgN').textContent=n||'';$('dlgN').style.display=n?'':'none';
+  var I=$('dlgI');
+  if(input){I.style.display='';I.type=input.type||'text';I.inputMode=input.type==='number'?'numeric':'text';I.value=input.value==null?'':input.value;I.placeholder=input.ph||'';}
+  else I.style.display='none';
+  $('dlgO').textContent=okText||'OK';$('dlgC').textContent=cancelText||'キャンセル';
+  DLGCB=cb;
+  $('dlgO').onclick=function(){var f=DLGCB;dlgClose();f&&f(input?I.value:true);};
+  $('dlgC').onclick=function(){var f=DLGCB;dlgClose();if(!input&&f)f(false);};
+  I.onkeydown=function(e){if(e.key==='Enter'&&!e.isComposing)$('dlgO').onclick();};
+  $('dlg').classList.add('on');
+  if(input)setTimeout(function(){I.focus();try{I.select();}catch(x){}},50);
+}
+function dlgClose(){$('dlg').classList.remove('on');DLGCB=null;}
+function inputBox(t,n,v,type,cb){dlgOpen(t,n,{value:v,type:type},'保存','キャンセル',cb);}
+function yesNo(t,n,cb,okText,noText){dlgOpen(t,n,null,okText||'はい',noText||'いいえ',cb);}
 function upd(i,c,m){var t=D.取引[i];call('apiUpdate',[K,D.ym,t.id,c,!!m],show);}
 function item(i){
   var t=D.取引[i];
-  var v=prompt('何を買いましたか？\n（例：牛乳・卵、ティッシュ、すーちゃんの牧草）',t.品目||'');
-  if(v===null)return;
-  call('apiItem',[K,D.ym,t.id,v.trim()],show);
+  inputBox('何を買いましたか？','例：牛乳・卵、ティッシュ、すーちゃんの牧草',t.品目||'','text',function(v){
+    call('apiItem',[K,D.ym,t.id,String(v).trim()],show);
+  });
 }
-function kubun(i,v){var m=(v==='特別費'||v==='やりくり')&&confirm('このお店を、次からも自動で「'+v+'」にしますか？');upd(i,{区分:v},m);}
+function kubun(i,v){
+  if(v==='特別費'||v==='やりくり')yesNo('次からも自動で「'+v+'」にしますか？','このお店の支払いを、次から自動でこの区分にします',function(m){upd(i,{区分:v},!!m);},'する','今回だけ');
+  else upd(i,{区分:v},false);
+}
 function nm(i){
   var t=D.取引[i];
-  var v=prompt('正しいお店の名前'+(t.店舗?'\n（明細の名前：'+t.店舗+'）':''),t.メモ||t.店舗||'');
-  if(v===null)return;
-  v=v.trim();
-  if(!v){alert('お店の名前を入れてください');return;}
-  upd(i,{メモ:v.slice(0,30),確認:1});
+  inputBox('正しいお店の名前',t.店舗?'明細の名前：'+t.店舗:'',t.メモ||t.店舗||'','text',function(v){
+    v=String(v).trim();
+    if(!v){alert('お店の名前を入れてください');return;}
+    upd(i,{メモ:v.slice(0,30),確認:1});
+  });
 }
-function hoten(i){var t=D.取引[i];if(confirm(yen(t.金額)+' を貯蓄口座から共有口座へ移しましたか？\n（貯蓄口座の残高からも引きます）'))upd(i,{補填:1});}
-function amt(i){var v=prompt('正しい金額',D.取引[i].金額);if(v!==null&&v!=='')upd(i,{金額:v});}
+function hoten(i){var t=D.取引[i];yesNo(yen(t.金額)+' を貯蓄口座から共有口座へ移しましたか？','貯蓄口座の残高からも引きます',function(ok){if(ok)upd(i,{補填:1});},'移した','まだ');}
+function amt(i){inputBox('正しい金額','',D.取引[i].金額,'number',function(v){if(v!==''&&v!=null)upd(i,{金額:v});});}
 function cash(){
   var a=$('camt').value,n=$('cname').value;
   if(!a||!n){alert('金額とお店を入れてください');return;}
@@ -675,9 +706,10 @@ function income(){
 }
 function setSave(){
   var S=D&&D.貯蓄;
-  var v=prompt('貯蓄口座の今の残高（銀行アプリの数字）',S&&S.残高!=null?S.残高:'');
-  if(v===null||v==='')return;
-  call('apiSaving',[K,v],show);
+  inputBox('貯蓄口座の今の残高','銀行アプリの数字を入れてください',S&&S.残高!=null?S.残高:'','number',function(v){
+    if(v===''||v==null)return;
+    call('apiSaving',[K,v],show);
+  });
 }
 
 /* ---- 相談タブ ---- */
