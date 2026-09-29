@@ -147,6 +147,19 @@ input,select{font:inherit;font-size:17px;color:var(--text);background:transparen
 .field{display:block;width:100%;background:var(--card);border-radius:12px;padding:14px;margin:16px 0 12px;text-align:center}
 details summary{font-size:15px;font-weight:600;cursor:pointer}
 pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;color:var(--sub)}
+.xbtn{flex:none;border:0;background:var(--fill);color:var(--sub);width:26px;height:26px;border-radius:50%;font-size:14px;line-height:26px;text-align:center;padding:0;cursor:pointer;margin-top:1px}
+.wday{border-top:.5px solid var(--sep);padding:9px 0}
+.wday summary{list-style:none;display:flex;align-items:center;gap:10px;font-weight:400}
+.wday summary::-webkit-details-marker{display:none}
+.wday .d{width:64px;flex:none;font-size:14px}
+.wday .today{color:var(--blue);font-weight:700}
+.wday .fut{color:var(--sub)}
+.wday .cbar{flex:1;margin-top:0}
+.wday .amt{width:78px;text-align:right;font-size:15px}
+.wday .mx{padding:4px 0 2px 74px}
+.wday .mx .top{font-size:14px;padding:3px 0}
+.wcmp{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;margin-top:10px;padding-top:10px;border-top:.5px solid var(--sep)}
+.wcmp b{font-variant-numeric:tabular-nums;text-align:right}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
 <div id="busy">通信中…</div>
@@ -184,6 +197,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 </div>
 <div class="card" id="ins"></div>
 <div class="card" id="tip"></div>
+<div class="card" id="week"></div>
 </section>
 
 
@@ -218,10 +232,10 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <button class="primary" onclick="income()">記録する</button>
 </div>
 </div>
-<div class="sec">特別費</div>
-<div class="card" id="special"></div>
 <div class="sec">今月の取引</div>
 <div id="list"></div>
+<div class="sec">特別費</div>
+<div class="card" id="special"></div>
 </section>
 
 <!-- ===== 相談 ===== -->
@@ -250,6 +264,9 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 
 <!-- ===== レポート ===== -->
 <section id="tab-rep" style="display:none">
+<div class="card" id="cats"></div>
+<div class="card"><div id="budStatus"></div><div id="budEdit"></div></div>
+<div class="card" id="fixed"></div>
 <div class="card">
 <div class="chead"><span class="ico aigrad">✦</span><span class="ct">AIレポート</span><span class="cr">自動：日曜20時・毎月1日</span></div>
 <div class="aibtns">
@@ -258,9 +275,6 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 </div>
 <div id="reps"></div>
 </div>
-<div class="card" id="cats"></div>
-<div class="card"><div id="budStatus"></div><div id="budEdit"></div></div>
-<div class="card" id="fixed"></div>
 <div class="card">
 <div class="chead"><span class="ico aigrad">✦</span><span class="ct">固定費の見直し</span><span class="cr">数か月に1回がおすすめ</span></div>
 <button class="ghost" onclick="fixReview()">AIに固定費を見直してもらう</button>
@@ -341,16 +355,70 @@ function tipHTML(){
   return h+'<button class="txtbtn" onclick="advice()">今の数字で言い直してもらう</button>';
 }
 function advice(){call('apiAdvice',[K],show);}
+function insKey(x){return String(x.題)+'|'+String(x.文);}
+function insHidden(){try{return JSON.parse(localStorage.getItem('ykins')||'[]');}catch(e){return [];}}
+function insSetHidden(a){try{localStorage.setItem('ykins',JSON.stringify(a.slice(-100)));}catch(e){}}
 function insHTML(){
-  var L=D.気づき||[];
+  var all=D.気づき||[],hid=insHidden();
+  var L=[],n=0;
+  all.forEach(function(x,i){if(hid.indexOf(insKey(x))<0)L.push(i);else n++;});
   var h=head('var(--orange)','!','気づき',L.length?L.length+'件':'');
-  if(!L.length)return h+'<div class="rs">今のところ気になる点はありません</div>';
+  var back=n?'<button class="txtbtn" onclick="insRestore()">確認済みの気づきを戻す（'+n+'件）</button>':'';
+  if(!L.length)return h+'<div class="rs">'+(n?'すべて確認済みです':'今のところ気になる点はありません')+'</div>'+back;
   h+='<div class="list ins">';
-  L.forEach(function(x){
-        var on=x.タブ?' tap" onclick="tab(\''+x.タブ+'\')"':'"';
-    h+='<div class="row'+on+'><span class="dot" style="background:'+(COL[x.色]||'var(--sub)')+'"></span><div class="grow"><div class="rt2">'+esc(x.題)+'</div><div class="rs">'+esc(x.文)+'</div></div>'+(x.タブ?'<span class="chev">›</span>':'')+'</div>';
+  L.forEach(function(i){
+    var x=all[i];
+    var on=x.タブ?' tap" onclick="tab(\''+x.タブ+'\')"':'"';
+    h+='<div class="row'+on+'><span class="dot" style="background:'+(COL[x.色]||'var(--sub)')+'"></span><div class="grow"><div class="rt2">'+esc(x.題)+'</div><div class="rs">'+esc(x.文)+'</div></div>'+
+      '<button class="xbtn" aria-label="確認したので消す" onclick="event.stopPropagation();insDone('+i+')">✕</button></div>';
   });
-  return h+'</div>';
+  return h+'</div>'+back;
+}
+function insDone(i){
+  var x=(D.気づき||[])[i];if(!x)return;
+  var hid=insHidden(),k=insKey(x);if(hid.indexOf(k)<0)hid.push(k);
+  insSetHidden(hid);$('ins').innerHTML=insHTML();
+}
+function insRestore(){
+  var now=(D.気づき||[]).map(insKey);
+  insSetHidden(insHidden().filter(function(k){return now.indexOf(k)<0;}));
+  $('ins').innerHTML=insHTML();
+}
+function weekHTML(){
+  var W=D.今週;
+  var h=head('var(--teal)','7','今週のやりくり',W?esc(W.期間):'');
+  if(!W)return h+'<div class="rs">読み込み中…</div>';
+  var diff=W.使った-W.目安今日まで;
+  h+='<div class="v">'+num(W.使った)+'</div>';
+  h+='<div class="rs">月曜〜今日（'+W.経過+'日間）・'+W.件数+'件　1週間の目安 '+yen(W.目安週)+'</div>';
+  var ok=diff<=0;
+  h+='<span class="pill bg'+(ok?'順調':(diff<=W.目安1日?'注意':'ピンチ'))+'" style="margin-top:8px">'+
+    (ok?'目安どおり・今日までの目安より '+yen(-diff)+' 少ない':'目安より '+yen(diff)+' 多い')+'</span>';
+  var mx=Math.max(W.目安1日,1);W.日別.forEach(function(d){if(d.合計>mx)mx=d.合計;});
+  h+='<div style="margin-top:10px">';
+  W.日別.forEach(function(d){
+    var over=d.合計>W.目安1日;
+    var bar='<span class="cbar"><i style="width:'+(d.合計?Math.max(3,d.合計/mx*100):0)+'%;background:'+(over?'var(--red)':'var(--teal)')+'"></i></span>';
+    var lab='<span class="d'+(d.今日?' today':'')+(d.未来?' fut':'')+'">'+esc(d.日)+'</span>';
+    var am='<span class="amt'+(over?' up':'')+(d.未来?' fut':'')+'">'+(d.未来&&!d.合計?'－':yen(d.合計))+'</span>';
+    if(d.明細.length){
+      h+='<details class="wday"'+(d.今日?' open':'')+'><summary>'+lab+bar+am+'</summary><div class="mx">'+
+        d.明細.map(function(t){return '<div class="top"><span>'+esc(t.時刻)+' '+esc(t.名前)+' <span class="tiny">'+esc(t.カテゴリ)+'</span></span><span>'+yen(t.金額)+'</span></div>';}).join('')+'</div></details>';
+    }else{
+      h+='<div class="wday"><div style="display:flex;align-items:center;gap:10px">'+lab+bar+am+'</div></div>';
+    }
+  });
+  h+='</div><div class="tiny" style="margin-top:4px">青い日付＝今日。赤いバー＝1日の目安 '+yen(W.目安1日)+' を超えた日。日付をタップすると明細が開きます</div>';
+  var P=W.先月,rows=[];
+  rows.push(['計算の目安（今日まで）',yen(W.目安今日まで)]);
+  if(P&&P.あり){
+    var c=W.使った-P.同時期;
+    rows.push(['先月の同じ週・同じ曜日まで<div class="tiny">'+esc(P.期間)+'</div>',yen(P.同時期)]);
+    rows.push(['　→ 先月とくらべて','<span class="'+(c>0?'up':'down')+'">'+sgn(c)+yen(Math.abs(c))+'</span>']);
+    rows.push(['先月の1週間あたり（平均）',yen(P.週平均)]);
+  }
+  h+='<div class="wcmp">'+rows.map(function(r){return '<span>'+r[0]+'</span><b>'+r[1]+'</b>';}).join('')+'</div>';
+  return h+'<div class="tiny" style="margin-top:6px">やりくり費の支出だけを集計（固定費・特別費は入れていません）。目安＝今月のやりくり費÷今月の日数</div>';
 }
 function bankHTML(){
   var S=D.貯蓄;
@@ -536,6 +604,7 @@ function show(json){
   if(D.予備)n.push(D.残り<0?'予備費 '+yen(D.予備)+' から出している状態です':'予備費 '+yen(D.予備)+' は別にとってあります');
   $('note').innerHTML=n.map(esc).join('<br>');
   $('ins').innerHTML=insHTML();
+  $('week').innerHTML=weekHTML();
   $('bank').innerHTML=bankHTML();
   $('cats').innerHTML=catHTML(D.集計);
   $('budStatus').innerHTML=budHTML();
