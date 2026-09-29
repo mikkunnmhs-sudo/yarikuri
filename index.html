@@ -160,6 +160,15 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 .wday .mx .top{font-size:14px;padding:3px 0}
 .wcmp{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px;margin-top:10px;padding-top:10px;border-top:.5px solid var(--sep)}
 .wcmp b{font-variant-numeric:tabular-nums;text-align:right}
+.fbadge{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:2px}
+.fb-k{background:var(--green);color:#fff}.fb-m{background:var(--fill);color:var(--sub)}
+.nmcal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:10px;text-align:center}
+.nmcal .nw{font-size:11px;color:var(--sub);font-weight:600}
+.nmcal .nd{height:46px;min-width:0;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-variant-numeric:tabular-nums;background:var(--fill);color:var(--text);overflow:hidden}
+.nmcal .nd.nok{background:var(--green);color:#fff;font-weight:700}
+.nmcal .nd.nfut{background:transparent;color:var(--sub);opacity:.5}
+.nmcal .nd.ntoday{box-shadow:inset 0 0 0 2px var(--blue)}
+.nmcal .nd i{font-style:normal;font-size:9px;line-height:1.1;opacity:.8}
 #dlg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}
 #dlg.on{display:flex}
 #dlg .box{background:var(--card);border-radius:14px;width:100%;max-width:340px;padding:18px 16px 12px}
@@ -206,6 +215,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 </div>
 <div class="card" id="ins"></div>
 <div class="card" id="tip"></div>
+<div class="card" id="nomoney"></div>
 <div class="card" id="week"></div>
 </section>
 
@@ -522,10 +532,50 @@ function fixHTML(F){
   var M={'済み':'✓','これから':'・','取り置き':'◇','通知待ち':'…','今月はなし':'－'};
   var C={'済み':'ok','これから':'soon','取り置き':'hold','通知待ち':'wait','今月はなし':'none'};
   h+='<div class="list" style="margin-top:8px">';
-  (F.一覧||[]).forEach(function(x){
-    h+='<div class="row"><span class="st st-'+(C[x.状態]||'none')+'">'+(M[x.状態]||'')+'</span><div class="grow"><div class="rt">'+esc(x.項目)+'</div><div class="rs">'+esc(x.説明)+'</div></div><div class="amt">'+(x.金額?yen(x.金額):'')+'</div></div>';
+  FIXL=F.一覧||[];
+  FIXL.forEach(function(x,i){
+    var ed=fixEditable(x);
+    var bd=x.確定!=null?'<span class="fbadge fb-k">確定</span>':(x.状態!=='済み'&&x.見込み?'<span class="fbadge fb-m">見込み</span>':'');
+    var sub=esc(x.説明)+(x.確定!=null&&x.確定月&&x.状態!=='済み'?'<br>'+esc(Number(x.確定月.slice(5))+'月の引き落とし：確定 '+yen(x.確定)):'');
+    h+='<div class="row'+(ed?' tap" onclick="fixEdit('+i+')"':'"')+'><span class="st st-'+(C[x.状態]||'none')+'">'+(M[x.状態]||'')+'</span><div class="grow"><div class="rt">'+esc(x.項目)+bd+'</div><div class="rs">'+sub+'</div></div><div class="amt">'+(x.金額?yen(x.金額):'')+'</div>'+(ed?'<span class="chev">›</span>':'')+'</div>';
   });
-  return h+'</div>';
+  return h+'</div><div class="tiny" style="margin-top:6px">項目をタップすると、確定した金額を入れられます（空にすると見込み額に戻ります）</div>';
+}
+var FIXL=[];
+function fixEditable(x){
+  if(!x||!x.編集)return false;
+  if(x.状態==='済み'&&String(x.払い方||'').indexOf('カード')>=0)return false; // カード払いは通知の金額が実額
+  return true;
+}
+function fixEdit(i){
+  var x=FIXL[i];if(!x)return;
+  var mm=x.確定月?Number(x.確定月.slice(5))+'月':'今月';
+  var note='見込み '+yen(x.見込み)+(x.確定!=null?'・今の確定額 '+yen(x.確定):'')+'\n空にして保存すると見込み額に戻ります';
+  var v=x.確定!=null?x.確定:(x.状態==='済み'?x.金額:'');
+  inputBox(x.項目+'（'+mm+'の引き落とし）の確定額',note,v,'number',function(val){
+    call('apiFixAmount',[K,x.項目,String(val).trim(),x.確定月||''],show);
+  });
+}
+function nmHTML(){
+  var N=D.お金なし;
+  var h=head('var(--green)','0','ノーマネーデー',N?esc(N.月)+' '+N.達成+'日':'');
+  if(!N)return h+'<div class="rs">読み込み中…</div>';
+  h+='<div class="rs">やりくり費を1円も使わなかった日（固定費・特別費は数えません）'+(N.先月達成!=null?'　先月（'+esc(N.先月名)+'）は '+N.先月達成+'日':'')+'</div>';
+  h+='<div class="nmcal">';
+  ['月','火','水','木','金','土','日'].forEach(function(w){h+='<div class="nw">'+w+'</div>';});
+  var off=(N.初日曜+6)%7;
+  for(var k=0;k<off;k++)h+='<div></div>';
+  var kk=function(v){return v>=1000?Math.round(v/100)/10+'k':String(v);};
+  N.日別.forEach(function(v,i){
+    var d=i+1,cls='nd',sub='';
+    if(d>N.今日)cls+=' nfut';
+    else if(d===N.今日){cls+=' ntoday';sub='<i>'+(v===0?'今日':kk(v))+'</i>';}
+    else if(v===0){cls+=' nok';sub='<i>✓</i>';}
+    else sub='<i>'+kk(v)+'</i>';
+    h+='<div class="'+cls+'" title="'+d+'日 '+yen(v)+'">'+d+sub+'</div>';
+  });
+  h+='</div><div class="tiny" style="margin-top:6px">緑＝ノーマネーデー達成。数字の下は使った額（k＝千円）。今日は終わるまで数えません</div>';
+  return h;
 }
 function fixReview(){
   $('fixres').innerHTML='<div class="rs" style="margin-top:12px">AIが見直しています…（30秒ほど）</div>';
@@ -614,6 +664,7 @@ function show(json){
   if(D.予備)n.push(D.残り<0?'予備費 '+yen(D.予備)+' から出している状態です':'予備費 '+yen(D.予備)+' は別にとってあります');
   $('note').innerHTML=n.map(esc).join('<br>');
   $('ins').innerHTML=insHTML();
+  $('nomoney').innerHTML=nmHTML();
   $('week').innerHTML=weekHTML();
   $('bank').innerHTML=bankHTML();
   $('cats').innerHTML=catHTML(D.集計);
