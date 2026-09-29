@@ -539,22 +539,57 @@ function fixHTML(F){
     var sub=esc(x.説明)+(x.確定!=null&&x.確定月&&x.状態!=='済み'?'<br>'+esc(Number(x.確定月.slice(5))+'月の引き落とし：確定 '+yen(x.確定)):'');
     h+='<div class="row'+(ed?' tap" onclick="fixEdit('+i+')"':'"')+'><span class="st st-'+(C[x.状態]||'none')+'">'+(M[x.状態]||'')+'</span><div class="grow"><div class="rt">'+esc(x.項目)+bd+'</div><div class="rs">'+sub+'</div></div><div class="amt">'+(x.金額?yen(x.金額):'')+'</div>'+(ed?'<span class="chev">›</span>':'')+'</div>';
   });
-  return h+'</div><div class="tiny" style="margin-top:6px">項目をタップすると、確定した金額を入れられます（空にすると見込み額に戻ります）</div>';
+  return h+'</div><div class="tiny" style="margin-top:6px">項目をタップすると、確定額・見込み額・引き落とし日を変えられます</div>';
 }
 var FIXL=[];
-function fixEditable(x){
-  if(!x||!x.編集)return false;
-  if(x.状態==='済み'&&String(x.払い方||'').indexOf('カード')>=0)return false; // カード払いは通知の金額が実額
-  return true;
-}
+function fixEditable(x){return !!(x&&x.編集);}
 function fixEdit(i){
   var x=FIXL[i];if(!x)return;
+  var 口座=String(x.払い方||'').indexOf('口座')>=0;
+  var 確OK=!(x.状態==='済み'&&String(x.払い方||'').indexOf('カード')>=0);
   var mm=x.確定月?Number(x.確定月.slice(5))+'月':'今月';
-  var note='見込み '+yen(x.見込み)+(x.確定!=null?'・今の確定額 '+yen(x.確定):'')+'\n空にして保存すると見込み額に戻ります';
-  var v=x.確定!=null?x.確定:(x.状態==='済み'?x.金額:'');
-  inputBox(x.項目+'（'+mm+'の引き落とし）の確定額',note,v,'number',function(val){
-    call('apiFixAmount',[K,x.項目,String(val).trim(),x.確定月||''],show);
-  });
+  var h='<div class="shead"><button class="txtbtn" onclick="closeSheet()">キャンセル</button><b>'+esc(x.項目)+'</b><span class="sp"></span></div>';
+  h+='<div class="scap">'+esc(x.払い方||'')+(x.説明?'・'+esc(x.説明):'')+'</div>';
+  if(確OK){
+    h+='<div class="k" style="margin:0 4px 6px">'+esc(mm)+'の引き落としの確定額</div><div class="group">'+
+      '<label class="row"><span class="lk">確定額</span><input id="fk" class="fin" type="number" inputmode="numeric" placeholder="空＝見込み" value="'+esc(x.確定!=null?x.確定:'')+'"></label></div>';
+  }
+  h+='<div class="k" style="margin:10px 4px 6px">いつもの設定</div><div class="group">'+
+    '<label class="row"><span class="lk">見込み額</span><input id="fm" class="fin" type="number" inputmode="numeric" value="'+esc(x.見込み||'')+'"></label>';
+  if(口座){
+    h+='<label class="row"><span class="lk">引落日</span><input id="fd" class="fin" inputmode="text" placeholder="例：13 / 末" value="'+esc(x.引落日||'')+'"></label>'+
+      '<label class="row"><span class="lk">頻度</span><select id="fi" onchange="fixIv()"><option value="1"'+(x.間隔>1?'':' selected')+'>毎月</option><option value="2"'+(x.間隔==2?' selected':'')+'>2か月に1回</option><option value="3"'+(x.間隔==3?' selected':'')+'>3か月に1回</option></select></label>'+
+      '<label class="row" id="fbw"><span class="lk">次の月</span><input id="fb" class="fin" type="month" value="'+esc(fixNextMonth(x))+'"></label>';
+  }
+  h+='</div>';
+  if(口座){
+    h+='<div class="k" style="margin:10px 4px 6px">今回だけ別の日に引き落とされるとき</div><div class="group">'+
+      '<label class="row"><span class="lk">日付</span><input id="fo" class="fin" type="date" value="'+esc(x.今回日||'')+'"></label></div>'+
+      '<div class="rs" style="margin:4px 4px 0">次の1回だけ、この日に動かします。いつもどおりなら空のままにしてください</div>';
+  }
+  h+='<div class="rs" style="margin:8px 4px 0">土日祝の引き落としは、次の平日にずらして計算します</div>';
+  h+='<button class="primary" onclick="fixSave('+i+')">保存する</button>';
+  $('txBody').innerHTML=h;openSheet('txSheet');
+  if(口座)fixIv();
+}
+function fixNextMonth(x){
+  if(x.間隔>1&&x.状態==='今月はなし'&&x.確定月)return x.確定月;
+  if(x.間隔>1&&x.基準月)return x.基準月;
+  var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+}
+function fixIv(){var w=$('fbw');if(w)w.style.display=$('fi').value==='1'?'none':'';}
+function fixSave(i){
+  var x=FIXL[i],o={};
+  if($('fk')){var k=$('fk').value.trim(),k0=x.確定!=null?String(x.確定):'';if(k!==k0){o.確定=k;o.確定月=x.確定月||'';}}
+  var m=$('fm').value.trim();if(m&&m!==String(x.見込み||''))o.見込み=m;
+  if($('fd')){
+    var d=$('fd').value.trim();if(d!==String(x.引落日||''))o.引落日=d;
+    var iv=Number($('fi').value),b=$('fb').value;
+    if(iv!==(Number(x.間隔)||1)||(iv>1&&b!==fixNextMonth(x))){o.間隔=iv;o.基準月=b;}
+    var od=$('fo').value;if(od!==(x.今回日||''))o.今回日=od;
+  }
+  if(!Object.keys(o).length){closeSheet();return;}
+  call('apiFixSetting',[K,x.項目,o],function(j){show(j);});
 }
 function nmHTML(){
   var N=D.お金なし;
