@@ -558,9 +558,9 @@ function fixEdit(i){
 }
 function nmHTML(){
   var N=D.お金なし;
-  var h=head('var(--green)','0','ノーマネーデー',N?esc(N.月)+'の達成日数':'');
+  var h=head('var(--green)','0','ノーマネーデー',N?esc(N.月):'');
   if(!N)return h+'<div class="rs">読み込み中…</div>';
-  h+='<div class="v" style="color:var(--green)">'+esc(N.月)+'は '+N.達成+'<span class="u">日</span> 達成！</div>';
+  h+='<div style="font-size:17px;font-weight:700;color:var(--green)">ノーマネーデー達成：'+N.達成+'日</div>';
   h+='<div class="rs">やりくり費を1円も使わなかった日（固定費・特別費は数えません）'+(N.先月達成!=null?'<br>先月（'+esc(N.先月名)+'）は '+N.先月達成+'日'+(N.達成>N.先月達成?'　→ もう先月超え！':(N.達成===N.先月達成?'　→ 先月と同じ':'　→ 先月まであと'+(N.先月達成-N.達成)+'日')):'')+'</div>';
   h+='<div class="nmcal">';
   ['月','火','水','木','金','土','日'].forEach(function(w){h+='<div class="nw">'+w+'</div>';});
