@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>アイコン作成</title>
+<style>
+body{font-family:-apple-system,"Hiragino Sans",sans-serif;background:#f2f2f7;text-align:center;padding:24px}
+canvas{width:200px;height:200px;border-radius:45px;box-shadow:0 4px 16px rgba(0,0,0,.15);display:block;margin:16px auto}
+button{padding:12px 20px;border:none;border-radius:10px;background:#007aff;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
+</style></head><body>
+<h2>やりくり アイコン</h2>
+<canvas id="c" width="1024" height="1024"></canvas>
+<button id="s">icon.png を保存</button>
+<script>
+var c=document.getElementById('c'),x=c.getContext('2d'),S=1024;
+function rr(X,Y,W,H,R){x.beginPath();x.roundRect(X,Y,W,H,R);}
+function kage(a,b,y){x.shadowColor=a;x.shadowBlur=b;x.shadowOffsetY=y;}
+function nashi(){x.shadowColor='transparent';x.shadowBlur=0;x.shadowOffsetY=0;}
+
+// 背景（青のグラデーション）
+var g=x.createLinearGradient(0,0,S,S);
+g.addColorStop(0,'#1a3cc6');g.addColorStop(.55,'#1f7fe0');g.addColorStop(1,'#1fd0d6');
+x.fillStyle=g;x.fillRect(0,0,S,S);
+
+// うしろのカード
+x.save();x.translate(430,430);x.rotate(-0.26);
+kage('rgba(0,20,80,.35)',40,16);
+var g1=x.createLinearGradient(0,-150,0,150);g1.addColorStop(0,'#ffffff');g1.addColorStop(1,'#cfdcfb');
+x.fillStyle=g1;rr(-240,-150,480,300,40);x.fill();nashi();
+x.save();rr(-240,-150,480,300,40);x.clip();x.fillStyle='#2f6fe6';x.fillRect(-240,-85,480,62);x.restore();
+x.fillStyle='#8fb0f0';rr(-190,40,120,30,15);x.fill();
+x.restore();
+
+// 前のカード
+x.save();x.translate(580,560);x.rotate(-0.14);
+kage('rgba(0,20,80,.35)',50,20);
+var g2=x.createLinearGradient(0,-170,0,170);g2.addColorStop(0,'#ffffff');g2.addColorStop(1,'#dde7fd');
+x.fillStyle=g2;rr(-260,-170,520,340,44);x.fill();nashi();
+x.fillStyle='#2563eb';rr(-210,-70,120,90,18);x.fill();
+x.strokeStyle='#fff';x.lineWidth=8;x.beginPath();
+x.moveTo(-170,-70);x.lineTo(-170,20);x.moveTo(-130,-70);x.lineTo(-130,20);
+x.moveTo(-210,-25);x.lineTo(-170,-25);x.moveTo(-130,-25);x.lineTo(-90,-25);x.stroke();
+x.fillStyle='#1e6ae6';x.beginPath();x.arc(120,-100,46,0,Math.PI*2);x.fill();
+x.fillStyle='rgba(110,175,255,.85)';x.beginPath();x.arc(172,-100,46,0,Math.PI*2);x.fill();
+x.fillStyle='#a9c3f5';rr(-210,70,190,28,14);x.fill();rr(-200,122,150,28,14);x.fill();
+x.restore();
+
+// ¥のコイン
+x.save();kage('rgba(120,50,0,.35)',40,14);
+var g3=x.createLinearGradient(590,520,830,760);g3.addColorStop(0,'#ffe04a');g3.addColorStop(1,'#ff9a1a');
+x.fillStyle=g3;x.beginPath();x.arc(712,640,132,0,Math.PI*2);x.fill();x.restore();
+var g4=x.createLinearGradient(620,560,800,740);g4.addColorStop(0,'#ffb321');g4.addColorStop(1,'#ff7a12');
+x.fillStyle=g4;x.beginPath();x.arc(712,640,106,0,Math.PI*2);x.fill();
+x.fillStyle='#fff8ec';x.font='bold 150px -apple-system,"Helvetica Neue",sans-serif';
+x.textAlign='center';x.textBaseline='middle';x.fillText('¥',712,650);
+
+document.getElementById('s').onclick=function(){
+  var a=document.createElement('a');a.download='icon.png';a.href=c.toDataURL('image/png');a.click();
+};
+</script></body></html>
