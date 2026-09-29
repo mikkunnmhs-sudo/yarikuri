@@ -292,7 +292,10 @@ function start(){
   tab('home');
   if(!K)K=saved();if(!K){askKey('');return;}load();
 }
-function load(){call('apiData',[K],function(j){save(K);show(j);});}
+function load(){
+  try{var c=localStorage.getItem('ykd');if(c&&!D)show(JSON.parse(c));}catch(x){}
+  call('apiData',[K],function(j){save(K);try{localStorage.setItem('ykd',JSON.stringify(j));}catch(x){}show(j);});
+}
 function err(e){
   var m=String((e&&e.message)||e);
   if(m.indexOf('合言葉が違います')>=0){try{localStorage.removeItem('yk');}catch(x){}K='';askKey('合言葉が違います。もう一度入れてください');return;}
@@ -331,7 +334,7 @@ function insHTML(){
   if(!L.length)return h+'<div class="rs">今のところ気になる点はありません</div>';
   h+='<div class="list ins">';
   L.forEach(function(x){
-    var on=x.タブ?' tap" onclick="tab(\''+x.タブ+'\')':'"';
+        var on=x.タブ?' tap" onclick="tab(\''+x.タブ+'\')"':'"';
     h+='<div class="row'+on+'><span class="dot" style="background:'+(COL[x.色]||'var(--sub)')+'"></span><div class="grow"><div class="rt2">'+esc(x.題)+'</div><div class="rs">'+esc(x.文)+'</div></div>'+(x.タブ?'<span class="chev">›</span>':'')+'</div>';
   });
   return h+'</div>';
