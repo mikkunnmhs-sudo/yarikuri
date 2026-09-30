@@ -65,7 +65,7 @@ h1{margin:0;font-size:34px;font-weight:700;letter-spacing:-.02em}
 .s順調{stroke:var(--green)}.s注意{stroke:var(--orange)}.sピンチ{stroke:var(--red)}
 .note{font-size:13px;color:var(--sub);margin-top:10px;padding-top:10px;border-top:.5px solid var(--sep)}
 .note:empty{display:none}
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.tiles{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px}
 .tiles .card{margin:0}
 .tiles .v{font-size:24px}
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -211,7 +211,6 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div class="card" id="bank"></div>
 <div class="tiles">
 <div class="card"><div class="k">今日の目安（1日あたり）</div><div class="v" id="perday">--</div><div class="rs" id="perdaySub"></div></div>
-<div class="card"><div class="k">月末の着地予想</div><div class="v" id="land">--</div><div class="rs" id="landSub"></div></div>
 </div>
 <div class="card" id="ins"></div>
 <div class="card" id="tip"></div>
@@ -698,8 +697,6 @@ function show(json){
   $('pct').textContent='残り '+pct(D.割合)+'%　縦の線＝今日の目標ライン '+pct(tgt)+'%（あと'+(dim-nw.getDate())+'日ぶん）';
   $('perday').innerHTML=num(D.今日あと);
   $('perdaySub').textContent='月末まであと'+dn+'日';
-  $('land').innerHTML=num(P.着地);$('land').className='v '+(P.着地<0?'ピンチ':'順調');
-  $('landSub').textContent=(P.着地<0?'足りなくなるペース':'残るペース')+'（1日約'+yen(P.平均)+'）'+(P.参考?'・月初なので参考':'');
   var n=[];
   if(D.固定費&&D.固定費.取り置き)n.push('取り置き '+yen(D.固定費.取り置き)+'（来月引き落とし分。上の金額からは先に引いてあります）');
   if(D.予備)n.push(D.残り<0?'予備費 '+yen(D.予備)+' から出している状態です':'予備費 '+yen(D.予備)+' は別にとってあります');
