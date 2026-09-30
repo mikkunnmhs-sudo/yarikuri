@@ -252,6 +252,8 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 </div>
 </div>
 <div class="sec">今月の取引</div>
+<div class="group"><label class="row"><span class="lk">検索</span><input id="q" class="fin" type="search" placeholder="お店・品目・カテゴリ・金額" oninput="renderList()"></label></div>
+<div class="rs" id="qinfo" style="margin:-4px 4px 8px"></div>
 <div id="list"></div>
 <div class="sec">特別費</div>
 <div class="card" id="special"></div>
@@ -711,14 +713,27 @@ function show(json){
   $('goals').innerHTML=goalsHTML();
   $('text').textContent=D.文||'';
   $('ccat').innerHTML=opts(D.cats,'食費');
-  var sp=[],rows=[],spSum=0;
+  var sp=[],spSum=0;
   (D.取引||[]).forEach(function(t,i){
-    if(t.区分==='特別費'){sp.push(txRow(t,i));spSum+=Number(t.金額)||0;}else rows.push(txRow(t,i));
+    if(t.区分==='特別費'){sp.push(txRow(t,i));spSum+=Number(t.金額)||0;}
   });
   $('special').innerHTML=head('var(--purple)','★','今月の特別費','やりくりとは別')+
     '<div class="v">'+num(spSum)+'</div><div class="rs">'+(D.特別待ち?'補填待ち '+yen(D.特別待ち):'補填待ちはありません')+'</div>'+
     (sp.length?'<div class="list" style="margin-top:6px">'+sp.join('')+'</div>':'<div class="rs" style="margin-top:6px">今月の特別費はまだありません</div>');
-  $('list').innerHTML='<div class="group">'+(rows.length?rows.join(''):'<div class="row"><span class="rs">まだ取引がありません</span></div>')+'</div>';
+  renderList();
+}
+/* 今月の取引を検索語で絞り込む（スペース区切り＝すべて含む。特別費は下の欄に別表示） */
+function renderList(){
+  var words=($('q').value||'').replace(/[\u3000,，]/g,' ').toLowerCase().split(' ').filter(Boolean);
+  var rows=[],sum=0,all=0;
+  (D.取引||[]).forEach(function(t,i){
+    if(t.区分==='特別費')return;
+    all++;
+    var hay=[t.メモ,t.店舗,t.品目,t.カテゴリ,t.区分,t.日,t.金額].join(' ').toLowerCase();
+    if(words.every(function(w){return hay.indexOf(w)>=0;})){rows.push(txRow(t,i));sum+=Number(t.金額)||0;}
+  });
+  $('qinfo').textContent=words.length?rows.length+'件 / '+all+'件・合計 '+yen(sum):'';
+  $('list').innerHTML='<div class="group">'+(rows.length?rows.join(''):'<div class="row"><span class="rs">'+(all?'見つかりませんでした':'まだ取引がありません')+'</span></div>')+'</div>';
 }
 function openSheet(id){$('scrim').classList.add('on');$(id).classList.add('on');}
 function closeSheet(){$('scrim').classList.remove('on');$('txSheet').classList.remove('on');}
