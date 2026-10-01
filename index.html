@@ -246,7 +246,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <label class="row"><span class="lk">金額</span><input id="iamt" class="fin" type="number" inputmode="numeric" placeholder="0"></label>
 <label class="row"><span class="lk">内容</span><input id="iname" class="fin" value="利息"></label>
 </div>
-<label id="iaddw" class="chk"><input type="checkbox" id="iadd"><span>今月のやりくり費に足す<br><span class="rs">チェックなし＝口座の残高だけ増やす</span></span></label>
+<div id="iaddw" class="rs" style="margin:8px 4px 12px">入金は口座の残高だけ増やします（今月あと使える額には入りません）</div>
 <button class="primary" onclick="income()">記録する</button>
 </div>
 </div>
@@ -803,8 +803,8 @@ function accChg(){$('iaddw').style.display=$('iacc').value==='共有'?'':'none';
 function income(){
   var c=$('iacc').value,a=$('iamt').value,n=$('iname').value.trim()||'入金';
   if(!(Number(a)>0)){alert('金額をプラスの数字で入れてください');return;}
-  var add=c==='共有'&&$('iadd').checked;
-  call('apiIncome',[K,c,a,n,add],function(j){$('iamt').value='';$('iadd').checked=false;show(j);});
+  var add=false;   // 入金は使える額に足さない
+  call('apiIncome',[K,c,a,n,add],function(j){$('iamt').value='';show(j);});
 }
 function setBal(){
   inputBox('共有口座の今の残高','銀行アプリの数字を入れてください。今月の表示だけ、この金額に合わせます',D&&D.実残高!=null?D.実残高:'','number',function(v){
