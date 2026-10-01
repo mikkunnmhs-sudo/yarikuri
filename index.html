@@ -752,6 +752,7 @@ function openTx(i){
     '<div class="row tap" onclick="amt('+i+')"><span class="grow" style="color:var(--blue)">金額を直す</span><span class="chev">›</span></div></div>';
   if(t.未確定)h+='<button class="primary" onclick="upd('+i+',{確認:1})">この店でOK</button>';
   if(t.区分==='特別費')h+=t.補填?'<div class="scap">補填済み：'+esc(t.補填)+'</div>':'<button class="primary" style="background:var(--purple)" onclick="hoten('+i+')">貯蓄口座から補填した</button>';
+  h+='<div class="group"><div class="row tap" onclick="del('+i+')"><span class="grow" style="color:var(--red);text-align:center">この記録を消す</span></div></div>';
   $('txBody').innerHTML=h;
   openSheet('txSheet');
 }
@@ -793,6 +794,15 @@ function nm(i){
   });
 }
 function hoten(i){var t=D.取引[i];yesNo(yen(t.金額)+' を貯蓄口座から共有口座へ移しましたか？','貯蓄口座の残高からも引きます',function(ok){if(ok)upd(i,{補填:1});},'移した','まだ');}
+function del(i){
+  var t=D.取引[i];
+  yesNo('この記録を消しますか？',esc0(t.メモ||t.店舗)+'　'+yen(t.金額)+'（'+t.日+'）\n消すと元に戻せません',function(ok){
+    if(!ok)return;
+    closeSheet();
+    call('apiDelete',[K,D.ym,t.id],show);
+  },'消す','やめる');
+}
+function esc0(x){return String(x==null?'':x);}
 function amt(i){inputBox('正しい金額','',D.取引[i].金額,'number',function(v){if(v!==''&&v!=null)upd(i,{金額:v});});}
 function cash(){
   var a=$('camt').value,n=$('cname').value;
