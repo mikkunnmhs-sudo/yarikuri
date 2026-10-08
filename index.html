@@ -253,6 +253,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div class="sec">今月の取引</div>
 <div class="group"><label class="row"><span class="lk">検索</span><input id="q" class="fin" type="search" placeholder="お店・品目・カテゴリ・金額" oninput="renderList()"></label></div>
 <div class="rs" id="qinfo" style="margin:-4px 4px 8px"></div>
+<div id="bulkControls"></div>
 <div id="list"></div>
 <div class="sec">特別費</div>
 <div class="card" id="special"></div>
@@ -320,6 +321,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 var API='https://script.google.com/macros/s/AKfycbwomkqdkTHYXHHL0aWNmfkm8TTSIx-Idm8lSG09fNMV9DlONcfVILu8-yhx5RZWXQMrhg/exec';
 var K=new URLSearchParams(location.search).get('k')||'';
 var D=null,TAB='home',HIS=[],RING=163.4,AM=[],TD=[],REPS=null,BUD=null;
+var SELECTING=false, SELECTED=new Set(), BULK_BUSY=false, BULK_MONTH='', BULK_HISTORY=[];
 var PAL=['var(--orange)','var(--blue)','var(--green)','var(--pink)','var(--purple)','var(--teal)','var(--red)'];
 var COL={red:'var(--red)',orange:'var(--orange)',blue:'var(--blue)',purple:'var(--purple)',green:'var(--green)'};
 function $(id){return document.getElementById(id);}
@@ -667,7 +669,7 @@ function mkReport(t){
 /* ---- 記録タブ ---- */
 function txRow(t,i){
   var name=t.メモ||t.店舗||'（名前なし）';
-  var h='<div class="row tap" onclick="openTx('+i+')"><div class="grow"><div class="rt">'+esc(name)+
+  var h='<div class="row tap" onclick="'+(SELECTING?'pickTx':'openTx')+'('+i+')">'+(SELECTING?'<input class="cb" type="checkbox" aria-label="'+esc(name)+'を選択" '+(SELECTED.has(String(t.id))?'checked':'')+' onclick="event.stopPropagation();pickTx('+i+')">':'')+'<div class="grow"><div class="rt">'+esc(name)+
     (t.未確定?' <span class="badge">未確定</span>':'')+
     (t.区分==='特別費'&&!t.補填?' <span class="badge b2">補填待ち</span>':'')+'</div>';
   if(t.メモ&&t.店舗&&t.メモ!==t.店舗)h+='<div class="tiny">明細：'+esc(t.店舗)+'</div>';
@@ -677,6 +679,9 @@ function txRow(t,i){
 }
 function show(json){
   D=JSON.parse(json);
+  if(BULK_MONTH!==D.ym){SELECTED.clear();SELECTING=false;BULK_MONTH=D.ym;}
+  var ids=new Set((D.取引||[]).map(function(t){return String(t.id);}));
+  SELECTED.forEach(function(id){if(!ids.has(id))SELECTED.delete(id);});
   closeSheet();
   var g=D.信号||'注意',dn=D.残日数||1,P=D.予測||{};
   var ratio=Math.max(0,Math.min(1,D.割合||0));
@@ -730,8 +735,60 @@ function renderList(){
     var hay=[t.メモ,t.店舗,t.品目,t.カテゴリ,t.区分,t.日,t.金額].join(' ').toLowerCase();
     if(words.every(function(w){return hay.indexOf(w)>=0;})){rows.push(txRow(t,i));sum+=Number(t.金額)||0;}
   });
+  bulkControls();
   $('qinfo').textContent=words.length?rows.length+'件 / '+all+'件・合計 '+yen(sum):'';
   $('list').innerHTML='<div class="group">'+(rows.length?rows.join(''):'<div class="row"><span class="rs">'+(all?'見つかりませんでした':'まだ取引がありません')+'</span></div>')+'</div>';
+}
+function bulkKey(){return 'yk-bulk-history:'+K;}
+function readBulkHistory(){try{var h=JSON.parse(localStorage.getItem(bulkKey())||'[]');return Array.isArray(h)?h.filter(function(x){return x&&x.changes&&Object.keys(x.changes).every(function(k){return ['カテゴリ','区分','メモ','確認'].indexOf(k)>=0;});}).slice(0,20):[];}catch(e){return [];}}
+function bulkLabel(c){return ['カテゴリ','区分','メモ'].filter(function(k){return c[k]!=null;}).map(function(k){return (k==='メモ'?'店名':k)+'：'+c[k];}).join(' / ');}
+function bulkControls(){
+  var draft={cat:$('bulkCat')&&$('bulkCat').value,type:$('bulkType')&&$('bulkType').value,name:$('bulkName')&&$('bulkName').value},historyOpen=$('bulkHistory')&&$('bulkHistory').open;
+  BULK_HISTORY=readBulkHistory();
+  var h='<button class="txtbtn" onclick="toggleSelection()" '+(BULK_BUSY?'disabled':'')+'>'+(SELECTING?'選択を終了':'選択')+'</button>';
+  if(SELECTING){
+    h+='<span class="rs"> '+SELECTED.size+'件を選択</span><button class="txtbtn" onclick="pickVisible()" '+(BULK_BUSY?'disabled':'')+'>表示中をすべて選択</button><button class="txtbtn" onclick="clearSelection()" '+(BULK_BUSY?'disabled':'')+'>選択解除</button>';
+    h+='<div class="group"><label class="row"><span class="lk">カテゴリ</span><select id="bulkCat"><option value="">変更しない</option>'+opts(D.cats)+'</select></label><label class="row"><span class="lk">区分</span><select id="bulkType"><option value="">変更しない</option>'+opts(D.区分)+'</select></label><label class="row"><span class="lk">店名</span><input id="bulkName" class="fin" maxlength="30" placeholder="空欄なら変更しない"></label></div>';
+    h+='<button class="primary" onclick="bulkNew()" '+(BULK_BUSY||!SELECTED.size?'disabled':'')+'>選択した明細を一括変更</button><details id="bulkHistory"'+(historyOpen?' open':'')+'><summary>一括変更履歴</summary><div class="rs">履歴を選ぶと、その変更内容を選択中の全明細に適用します。履歴はこの端末・ブラウザに保存されます。</div>';
+    BULK_HISTORY.forEach(function(x,i){h+='<button class="ghost" onclick="bulkReuse('+i+')" '+(BULK_BUSY||!SELECTED.size?'disabled':'')+'>'+esc(bulkLabel(x.changes))+'<div class="tiny">'+esc(x.date)+'・'+x.count+'件</div></button>';});
+    h+=(BULK_HISTORY.length?'':'<div class="rs">履歴はまだありません</div>')+'</details>';
+  }
+  $('bulkControls').innerHTML=h;
+  if(SELECTING){$('bulkCat').value=draft.cat||'';$('bulkType').value=draft.type||'';$('bulkName').value=draft.name||'';}
+}
+function redrawSelection(){show(JSON.stringify(D));}
+function toggleSelection(){if(BULK_BUSY)return;SELECTING=!SELECTING;SELECTED.clear();redrawSelection();}
+function pickTx(i){if(BULK_BUSY)return;var id=String(D.取引[i].id);if(SELECTED.has(id))SELECTED.delete(id);else SELECTED.add(id);redrawSelection();}
+function clearSelection(){if(BULK_BUSY)return;SELECTED.clear();redrawSelection();}
+function pickVisible(){
+  if(BULK_BUSY)return;
+  var words=($('q').value||'').replace(/[\u3000,，]/g,' ').toLowerCase().split(' ').filter(Boolean);
+  (D.取引||[]).forEach(function(t){var hay=[t.メモ,t.店舗,t.品目,t.カテゴリ,t.区分,t.日,t.金額].join(' ').toLowerCase();if(t.区分==='特別費'||words.every(function(w){return hay.indexOf(w)>=0;}))SELECTED.add(String(t.id));});
+  redrawSelection();
+}
+function bulkNew(){
+  var c={},cat=$('bulkCat').value,type=$('bulkType').value,name=$('bulkName').value.trim();
+  if(cat)c.カテゴリ=cat;if(type)c.区分=type;if(name){c.メモ=name;c.確認=1;}
+  if(!Object.keys(c).length){alert('変更内容を指定してください');return;}bulkApply(c);
+}
+function bulkReuse(i){if(BULK_HISTORY[i])bulkApply(Object.assign({},BULK_HISTORY[i].changes));}
+function bulkApply(c){
+  if(BULK_BUSY||!SELECTED.size)return;
+  var targets=(D.取引||[]).filter(function(t){return SELECTED.has(String(t.id));}).map(function(t){return t.id;}),ym=D.ym,done=0,last=null;
+  if(!targets.length)return;
+  BULK_BUSY=true;bulkControls();document.getElementById('main').inert=true;
+  function finish(failed){
+    BULK_BUSY=false;document.getElementById('main').inert=false;
+    if(done){var h=readBulkHistory();h.unshift({changes:c,date:new Date().toLocaleString('ja-JP'),count:done});try{localStorage.setItem(bulkKey(),JSON.stringify(h.slice(0,20)));}catch(e){alert('変更は保存されましたが、履歴をこの端末に保存できませんでした');}}
+    if(last)show(last);else bulkControls();
+    alert(failed?done+'件まで変更しました。残り'+(targets.length-done)+'件は選択を残しています。最新の明細を確認してから再実行してください。':done+'件を変更しました');
+    if(failed)load();
+  }
+  function next(){
+    if(done===targets.length){finish(false);return;}
+    call('apiUpdate',[K,ym,targets[done],c,false],function(j){last=j;SELECTED.delete(String(targets[done]));done++;next();},function(){finish(true);});
+  }
+  next();
 }
 function openSheet(id){$('scrim').classList.add('on');$(id).classList.add('on');}
 function closeSheet(){$('scrim').classList.remove('on');$('txSheet').classList.remove('on');}
