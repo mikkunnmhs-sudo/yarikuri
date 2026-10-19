@@ -315,7 +315,8 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 
 <div id="scrim" onclick="closeSheet()"></div>
 <div id="dlg" onclick="if(event.target===this)dlgClose()"><div class="box"><div class="dt" id="dlgT"></div><div class="dn" id="dlgN"></div><input id="dlgI"><div class="db"><button id="dlgC" onclick="dlgClose()">キャンセル</button><button class="ok" id="dlgO">OK</button></div></div></div>
-<div class="sheet" id="txSheet"><div class="grab"></div><div id="txBody"></div></div>
+<div class="sheet" id="categorySheet"><div class="grab"></div><div id="categoryBody"></div></div>
+<div class="sheet" id="txSheet" style="z-index:22"><div class="grab"></div><div id="txBody"></div></div>
 
 <script>
 var API='https://script.google.com/macros/s/AKfycbwomkqdkTHYXHHL0aWNmfkm8TTSIx-Idm8lSG09fNMV9DlONcfVILu8-yhx5RZWXQMrhg/exec';
@@ -471,7 +472,7 @@ function bankHTML(){
 function budgetRow(name,used,budget,color,comparison){
   var has=Number.isFinite(budget)&&budget>0,over=has&&used>budget;
   var rate=has?Math.round(used/budget*1000)/10:0;
-  var h='<div class="crow"><div class="top"><span>'+esc(name)+'</span><b'+(over?' class="up"':'')+'>使用済み '+yen(used)+'</b></div>';
+  var h='<div class="crow"><button class="top" style="width:100%;text-align:left;color:var(--text)" data-category="'+esc(name)+'" onclick="openCategory(this.dataset.category)"><span>'+esc(name)+' <span class="chev">›</span></span><b'+(over?' class="up"':'')+'>使用済み '+yen(used)+'</b></button>';
   if(has){
     h+='<div class="rs">月予算 '+yen(budget)+'・使用率 '+rate+'%</div>'+
       '<div class="cbar" role="progressbar" aria-label="'+esc(name)+'の予算使用率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.max(0,Math.min(100,rate))+'" aria-valuetext="'+rate+'%使用"><i style="width:'+Math.max(0,Math.min(100,used/budget*100))+'%;background:'+(over?'var(--red)':color)+'"></i></div>'+
@@ -667,9 +668,9 @@ function mkReport(t){
 }
 
 /* ---- 記録タブ ---- */
-function txRow(t,i){
+function txRow(t,i,detailOnly){
   var name=t.メモ||t.店舗||'（名前なし）';
-  var h='<div class="row tap" onclick="'+(SELECTING?'pickTx':'openTx')+'('+i+')">'+(SELECTING?'<input class="cb" type="checkbox" aria-label="'+esc(name)+'を選択" '+(SELECTED.has(String(t.id))?'checked':'')+' onclick="event.stopPropagation();pickTx('+i+')">':'')+'<div class="grow"><div class="rt">'+esc(name)+
+  var h='<div class="row tap" onclick="'+(SELECTING&&!detailOnly?'pickTx':'openTx')+'('+i+')">'+(SELECTING&&!detailOnly?'<input class="cb" type="checkbox" aria-label="'+esc(name)+'を選択" '+(SELECTED.has(String(t.id))?'checked':'')+' onclick="event.stopPropagation();pickTx('+i+')">':'')+'<div class="grow"><div class="rt">'+esc(name)+
     (t.未確定?' <span class="badge">未確定</span>':'')+
     (t.区分==='特別費'&&!t.補填?' <span class="badge b2">補填待ち</span>':'')+'</div>';
   if(t.メモ&&t.店舗&&t.メモ!==t.店舗)h+='<div class="tiny">明細：'+esc(t.店舗)+'</div>';
@@ -791,7 +792,18 @@ function bulkApply(c){
   next();
 }
 function openSheet(id){$('scrim').classList.add('on');$(id).classList.add('on');}
-function closeSheet(){$('scrim').classList.remove('on');$('txSheet').classList.remove('on');}
+function closeSheet(){$('scrim').classList.remove('on');$('txSheet').classList.remove('on');$('categorySheet').classList.remove('on');}
+function backToCategory(){$('txSheet').classList.remove('on');}
+function openCategory(name){
+  if(!D)return;
+  var rows=[],sum=0;
+  (D.取引||[]).forEach(function(t,i){
+    if(t.区分!=='やりくり'||t.カテゴリ!==name)return;
+    rows.push(txRow(t,i,true));sum+=Number(t.金額)||0;
+  });
+  $('categoryBody').innerHTML='<div class="shead"><button class="txtbtn" onclick="closeSheet()">閉じる</button><b>'+esc(name)+'の明細</b><span class="sp"></span></div><div class="sbig">'+num(sum)+'</div><div class="scap">'+esc(D.月)+'・生活費 '+rows.length+'件</div><div class="group">'+(rows.length?rows.join(''):'<div class="row"><span class="rs">このカテゴリの明細はありません</span></div>')+'</div>';
+  $('categorySheet').scrollTop=0;openSheet('categorySheet');
+}
 function seg(m){
   $('segOut').className=m===0?'on':'';$('segIn').className=m===1?'on':'';
   $('fOut').style.display=m===0?'':'none';$('fIn').style.display=m===1?'':'none';
@@ -799,7 +811,8 @@ function seg(m){
 }
 function openTx(i){
   var t=D.取引[i],name=t.メモ||t.店舗;
-  var h='<div class="shead"><button class="txtbtn" onclick="closeSheet()">閉じる</button><b>取引の詳細</b><span class="sp"></span></div>';
+  var fromCategory=$('categorySheet').classList.contains('on');
+  var h='<div class="shead"><button class="txtbtn" onclick="'+(fromCategory?'backToCategory()':'closeSheet()')+'">'+(fromCategory?'戻る':'閉じる')+'</button><b>取引の詳細</b><span class="sp"></span></div>';
   h+='<div class="sbig">'+num(t.金額)+'</div><div class="scap">'+esc(name)+
     (t.メモ&&t.店舗&&t.メモ!==t.店舗?'<br><span style="font-size:12px">明細：'+esc(t.店舗)+'</span>':'')+'<br>'+esc(t.日)+'</div>';
   h+='<div class="group"><div class="row tap" onclick="item('+i+')"><span class="lk">何を買った</span><span class="grow" style="text-align:right;color:'+(t.品目?'var(--text)':'var(--sub)')+'">'+esc(t.品目||'入力する')+'</span><span class="chev">›</span></div>'+
