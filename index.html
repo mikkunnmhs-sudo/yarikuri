@@ -481,25 +481,35 @@ function budgetRow(name,used,budget,color,comparison){
   if(comparison)h+='<div class="tiny">'+comparison+'</div>';
   return h+'</div>';
 }
+function foodCategory(name){return name==='食費'?'食料品':name;}
+function isFood(name){return ['食費','食料品','外食','コンビニ'].indexOf(name)>=0;}
+function categoryBudgets(){
+  var M={},food=0;
+  Object.keys(D.目安||{}).forEach(function(n){if(isFood(n))food+=Number(D.目安[n])||0;else M[n]=D.目安[n];});
+  M.食費=food||58000;return M;
+}
 function catHTML(A){
   if(!A)return '';
-  var y=A.やりくり,M=D.目安||{};
+  var y=A.やりくり,M=categoryBudgets();
   var h=head('var(--orange)','▦','カテゴリ別の予算と使用状況',esc(D.月)+' 1日〜今日');
   var total=Number(D.やりくり費)||0,used=Number(y.今月)||0;
   h+='<div class="v">'+num(used)+'</div><div class="rs">生活費の使用済み</div>';
   if(total>0)h+='<div class="rs">予算 '+yen(total)+'・使用率 '+(Math.round(used/total*1000)/10)+'%・'+(used>total?'超過 '+yen(used-total):'残り '+yen(total-used))+'</div>';
-  var rows=A.カテゴリ||[],seen={};
+  var rows=A.カテゴリ||[],seen={},foodUsed=0,foodDiff=0,sub={食料品:0,外食:0,コンビニ:0};
+  rows.forEach(function(c){if(isFood(c.名前)){foodUsed+=Number(c.今月)||0;foodDiff+=Number(c.差)||0;sub[foodCategory(c.名前)]+=Number(c.今月)||0;}});
+  h+=budgetRow('食費',foodUsed,Number(M.食費),PAL[0],A.先月あり?'先月の同じ時期より '+sgn(foodDiff)+yen(Math.abs(foodDiff)):'');
+  h+='<div style="padding-left:16px">'+['食料品','外食','コンビニ'].map(function(n){return '<button class="row tap" style="width:100%;text-align:left;color:var(--text)" data-category="'+esc(n)+'" onclick="openCategory(this.dataset.category)"><span class="grow">'+esc(n)+'</span><b>'+yen(sub[n])+'</b><span class="chev">›</span></button>';}).join('')+'</div>';
   rows.forEach(function(c,i){
-    seen[c.名前]=true;
+    if(isFood(c.名前))return;seen[c.名前]=true;
     var d=A.先月あり?'先月の同じ時期より '+sgn(c.差)+yen(Math.abs(c.差)):'';
-    h+=budgetRow(c.名前,Number(c.今月)||0,Number(M[c.名前]),PAL[i%PAL.length],d);
+    h+=budgetRow(c.名前,Number(c.今月)||0,Number(M[c.名前]),PAL[(i+1)%PAL.length],d);
   });
-  Object.keys(M).forEach(function(n,i){if(!seen[n])h+=budgetRow(n,0,Number(M[n]),PAL[i%PAL.length],'');});
+  Object.keys(M).forEach(function(n,i){if(n!=='食費'&&!seen[n])h+=budgetRow(n,0,Number(M[n]),PAL[i%PAL.length],'');});
   if(A.特別費)h+='<div class="note">特別費 '+yen(A.特別費)+' は生活費の使用額に含めていません。</div>';
   return h;
 }
 function budHTML(){
-  var M=D.目安||{},ks=Object.keys(M),sum=0;ks.forEach(function(c){sum+=Number(M[c])||0;});
+  var M=categoryBudgets(),ks=Object.keys(M),sum=0;ks.forEach(function(c){sum+=Number(M[c])||0;});
   var h=head('var(--green)','◎','カテゴリの月予算',ks.length?'合計 '+yen(sum):'');
   if(!ks.length)h+='<div class="rs">月予算は未設定です。</div>';
   else h+='<div class="rs">家計簿の「カテゴリ」の月予算を表示しています。生活費の予算 '+yen(D.やりくり費)+' に対して、'+(sum>D.やりくり費?'配分が '+yen(sum-D.やりくり費)+' 多くなっています':(sum<D.やりくり費?'未配分は '+yen(D.やりくり費-sum)+' です':'全額を配分済みです'))+'。</div>';
@@ -680,6 +690,8 @@ function txRow(t,i,detailOnly){
 }
 function show(json){
   D=JSON.parse(json);
+  D.cats=Array.from(new Set((D.cats||[]).map(foodCategory).concat(['食料品','外食','コンビニ'])));
+  (D.取引||[]).forEach(function(t){t.カテゴリ=foodCategory(t.カテゴリ);});
   if(BULK_MONTH!==D.ym){SELECTED.clear();SELECTING=false;BULK_MONTH=D.ym;}
   var ids=new Set((D.取引||[]).map(function(t){return String(t.id);}));
   SELECTED.forEach(function(id){if(!ids.has(id))SELECTED.delete(id);});
@@ -716,7 +728,7 @@ function show(json){
   $('fixed').innerHTML=fixHTML(D.固定費);
   $('goals').innerHTML=goalsHTML();
   $('text').textContent=D.文||'';
-  $('ccat').innerHTML=opts(D.cats,'食費');
+  $('ccat').innerHTML=opts(D.cats,'食料品');
   var sp=[],spSum=0;
   (D.取引||[]).forEach(function(t,i){
     if(t.区分==='特別費'){sp.push(txRow(t,i));spSum+=Number(t.金額)||0;}
@@ -769,7 +781,7 @@ function pickVisible(){
 }
 function bulkNew(){
   var c={},cat=$('bulkCat').value,type=$('bulkType').value,name=$('bulkName').value.trim();
-  if(cat)c.カテゴリ=cat;if(type)c.区分=type;if(name){c.メモ=name;c.確認=1;}
+  if(cat)c.カテゴリ=foodCategory(cat);if(type)c.区分=type;if(name){c.メモ=name;c.確認=1;}
   if(!Object.keys(c).length){alert('変更内容を指定してください');return;}bulkApply(c);
 }
 function bulkReuse(i){if(BULK_HISTORY[i])bulkApply(Object.assign({},BULK_HISTORY[i].changes));}
@@ -798,7 +810,7 @@ function openCategory(name){
   if(!D)return;
   var rows=[],sum=0;
   (D.取引||[]).forEach(function(t,i){
-    if(t.区分!=='やりくり'||t.カテゴリ!==name)return;
+    if(t.区分!=='やりくり'||!(name==='食費'?isFood(t.カテゴリ):foodCategory(t.カテゴリ)===name))return;
     rows.push(txRow(t,i,true));sum+=Number(t.金額)||0;
   });
   $('categoryBody').innerHTML='<div class="shead"><button class="txtbtn" onclick="closeSheet()">閉じる</button><b>'+esc(name)+'の明細</b><span class="sp"></span></div><div class="sbig">'+num(sum)+'</div><div class="scap">'+esc(D.月)+'・生活費 '+rows.length+'件</div><div class="group">'+(rows.length?rows.join(''):'<div class="row"><span class="rs">このカテゴリの明細はありません</span></div>')+'</div>';
@@ -844,7 +856,7 @@ function dlgOpen(t,n,input,okText,cancelText,cb){
 function dlgClose(){$('dlg').classList.remove('on');DLGCB=null;}
 function inputBox(t,n,v,type,cb){dlgOpen(t,n,{value:v,type:type},'保存','キャンセル',cb);}
 function yesNo(t,n,cb,okText,noText){dlgOpen(t,n,null,okText||'はい',noText||'いいえ',cb);}
-function upd(i,c,m){var t=D.取引[i];call('apiUpdate',[K,D.ym,t.id,c,!!m],show);}
+function upd(i,c,m){if(c.カテゴリ)c.カテゴリ=foodCategory(c.カテゴリ);var t=D.取引[i];call('apiUpdate',[K,D.ym,t.id,c,!!m],show);}
 function item(i){
   var t=D.取引[i];
   inputBox('何を買いましたか？','例：牛乳・卵、ティッシュ、すーちゃんの牧草',t.品目||'','text',function(v){
@@ -947,7 +959,7 @@ function showReceipt(R){
   var h='<div class="k" style="margin-top:12px">読み取り結果（まちがいは直せます）</div><div class="list">'+
     '<label class="row"><span class="lk">金額</span><input id="ramt" class="fin" type="number" inputmode="numeric" value="'+esc(R.合計)+'"></label>'+
     '<label class="row"><span class="lk">お店</span><input id="rname" class="fin" value="'+esc(R.店舗)+'"></label>'+
-    '<label class="row"><span class="lk">カテゴリ</span><select id="rcat">'+opts(D.cats,R.カテゴリ)+'</select></label>'+
+    '<label class="row"><span class="lk">カテゴリ</span><select id="rcat">'+opts(D.cats,foodCategory(R.カテゴリ))+'</select></label>'+
     '<label class="row"><span class="lk">何を</span><input id="ritem" class="fin" value="'+esc(R.品目)+'"></label></div>';
   if(R.日付)h+='<div class="rs">レシートの日付：'+esc(R.日付)+'（現金で記録すると、今日の日付になります）</div>';
   var M=(D.取引||[]).map(function(t,i){return {t:t,i:i};}).filter(function(x){return Number(x.t.金額)===Number(R.合計)&&x.t.区分!=='調整';}).slice(0,3);
@@ -1003,7 +1015,7 @@ function tidy(){
   },function(){$('aires').innerHTML='';});
 }
 function tidyApply(){
-  var L=TD.filter(function(x,i){return $('td'+i).checked;}).map(function(x){return {id:x.id,名前:x.名前,カテゴリ:x.カテゴリ};});
+  var L=TD.filter(function(x,i){return $('td'+i).checked;}).map(function(x){return {id:x.id,名前:x.名前,カテゴリ:foodCategory(x.カテゴリ)};});
   if(!L.length){alert('チェックがありません');return;}
   aimsg('反映しています…（'+L.length+'件。少し時間がかかります）');
   call('apiTidyApply',[K,D.ym,L],function(j){show(j);aimsg(L.length+'件を反映しました');});
