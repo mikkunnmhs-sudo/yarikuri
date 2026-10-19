@@ -468,41 +468,41 @@ function bankHTML(){
 
 
 /* ---- レポートタブ ---- */
+function budgetRow(name,used,budget,color,comparison){
+  var has=Number.isFinite(budget)&&budget>0,over=has&&used>budget;
+  var rate=has?Math.round(used/budget*1000)/10:0;
+  var h='<div class="crow"><div class="top"><span>'+esc(name)+'</span><b'+(over?' class="up"':'')+'>使用済み '+yen(used)+'</b></div>';
+  if(has){
+    h+='<div class="rs">月予算 '+yen(budget)+'・使用率 '+rate+'%</div>'+
+      '<div class="cbar" role="progressbar" aria-label="'+esc(name)+'の予算使用率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.max(0,Math.min(100,rate))+'" aria-valuetext="'+rate+'%使用"><i style="width:'+Math.max(0,Math.min(100,used/budget*100))+'%;background:'+(over?'var(--red)':color)+'"></i></div>'+
+      '<div class="rs'+(over?' up':'')+'">'+(over?'予算を '+yen(used-budget)+' 超過':'あと使える '+yen(budget-used))+'</div>';
+  }else h+='<div class="rs">月予算：未設定（残額・使用率は計算しません）</div>';
+  if(comparison)h+='<div class="tiny">'+comparison+'</div>';
+  return h+'</div>';
+}
 function catHTML(A){
   if(!A)return '';
   var y=A.やりくり,M=D.目安||{};
-  var h=head('var(--orange)','▦','カテゴリ別',esc(D.月)+' 1日〜今日');
-  h+='<div class="v">'+num(y.今月)+'</div><div class="rs">やりくり合計'+(A.先月あり?'　先月の同じ時期（1〜'+A.今日+'日）より <span class="'+(y.差>0?'up':'down')+'">'+sgn(y.差)+yen(Math.abs(y.差))+'</span>':'')+'</div>';
-  var mx=Math.max.apply(null,A.カテゴリ.map(function(c){return c.今月;}).concat([1]));
-  h+='<div style="margin-top:10px">';
-  A.カテゴリ.forEach(function(c,i){
-    var m=M[c.名前],over=m&&c.今月>m;
-    var w=m?Math.min(100,c.今月/m*100):c.今月/mx*100;
-    var d=A.先月あり?sgn(c.差)+yen(Math.abs(c.差))+(c.率!==null?'（'+(c.率>0?'+':'')+c.率+'%）':'（新しく増えた）'):'';
-    h+='<div class="crow"><div class="top"><span>'+esc(c.名前)+'</span><b'+(over?' class="up"':'')+'>'+yen(c.今月)+(m?'<span style="font-weight:400;color:var(--sub);font-size:13px"> / '+yen(m)+'</span>':'')+'</b></div>'+
-      '<div class="cbar"><i style="width:'+Math.max(2,w)+'%;background:'+(over?'var(--red)':PAL[i%PAL.length])+'"></i></div>'+
-      (m?'<div class="rs'+(over?' up':'')+'">'+(over?'目安を '+yen(c.今月-m)+' オーバー':'目安まで あと '+yen(m-c.今月))+'</div>':'')+
-      (d?'<div class="rs '+(c.差>0?'up':'down')+'">先月比 '+d+'</div>':'')+'</div>';
+  var h=head('var(--orange)','▦','カテゴリ別の予算と使用状況',esc(D.月)+' 1日〜今日');
+  var total=Number(D.やりくり費)||0,used=Number(y.今月)||0;
+  h+='<div class="v">'+num(used)+'</div><div class="rs">生活費の使用済み</div>';
+  if(total>0)h+='<div class="rs">予算 '+yen(total)+'・使用率 '+(Math.round(used/total*1000)/10)+'%・'+(used>total?'超過 '+yen(used-total):'残り '+yen(total-used))+'</div>';
+  var rows=A.カテゴリ||[],seen={};
+  rows.forEach(function(c,i){
+    seen[c.名前]=true;
+    var d=A.先月あり?'先月の同じ時期より '+sgn(c.差)+yen(Math.abs(c.差)):'';
+    h+=budgetRow(c.名前,Number(c.今月)||0,Number(M[c.名前]),PAL[i%PAL.length],d);
   });
-  Object.keys(M).forEach(function(n){
-    if(!A.カテゴリ.some(function(c){return c.名前===n;}))
-      h+='<div class="crow"><div class="top"><span>'+esc(n)+'</span><b>0円<span style="font-weight:400;color:var(--sub);font-size:13px"> / '+yen(M[n])+'</span></b></div><div class="cbar"><i style="width:2%;background:var(--green)"></i></div></div>';
-  });
-  h+='</div>';
-  var n=[];
-  if(A.先月あり)n.push('先月は1か月で '+yen(A.先月全体)+' でした');
-  if(A.特別費)
-
-  n.push('特別費 '+yen(A.特別費)+'（やりくりには入れていません）');
-  if(n.length)h+='<div class="note">'+n.map(esc).join('<br>')+'</div>';
+  Object.keys(M).forEach(function(n,i){if(!seen[n])h+=budgetRow(n,0,Number(M[n]),PAL[i%PAL.length],'');});
+  if(A.特別費)h+='<div class="note">特別費 '+yen(A.特別費)+' は生活費の使用額に含めていません。</div>';
   return h;
 }
 function budHTML(){
-  var M=D.目安||{},ks=Object.keys(M),sum=0;ks.forEach(function(c){sum+=M[c];});
-  var h=head('var(--green)','◎','カテゴリ別の目安',ks.length?'合計 '+yen(sum):'');
-  if(!ks.length)h+='<div class="rs">まだ決めていません。AIが過去3か月の実績から提案します。</div>';
-  else h+='<div class="rs">上の「カテゴリ別」に目安が表示されます。やりくり費 '+yen(D.やりくり費)+(sum>D.やりくり費?' を '+yen(sum-D.やりくり費)+' 超えています':' の中に収まっています')+'</div>';
-  return h+'<button class="ghost" onclick="budPlan()">AIに目安を提案してもらう</button>';
+  var M=D.目安||{},ks=Object.keys(M),sum=0;ks.forEach(function(c){sum+=Number(M[c])||0;});
+  var h=head('var(--green)','◎','カテゴリの月予算',ks.length?'合計 '+yen(sum):'');
+  if(!ks.length)h+='<div class="rs">月予算は未設定です。</div>';
+  else h+='<div class="rs">家計簿の「カテゴリ」の月予算を表示しています。生活費の予算 '+yen(D.やりくり費)+' に対して、'+(sum>D.やりくり費?'配分が '+yen(sum-D.やりくり費)+' 多くなっています':(sum<D.やりくり費?'未配分は '+yen(D.やりくり費-sum)+' です':'全額を配分済みです'))+'。</div>';
+  return h+'<button class="ghost" onclick="budPlan()">AIに予算配分の案を作ってもらう</button>';
 }
 function budPlan(){
   $('budEdit').innerHTML='<div class="rs" style="margin-top:12px">AIが考えています…（30秒ほど）</div>';
