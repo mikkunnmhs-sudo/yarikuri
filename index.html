@@ -231,18 +231,21 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div id="aires"></div>
 </div>
 <div class="card">
-<div class="segc"><button id="segOut" class="on" onclick="seg(0)">支出（現金など）</button><button id="segIn" onclick="seg(1)">入金（利息など）</button></div>
+<div class="segc"><button id="segOut" class="on" onclick="seg(0)">支出（現金・貯蓄から）</button><button id="segIn" onclick="seg(1)">入金（利息など）</button></div>
 <div id="fOut">
 <div class="list">
 <label class="row"><span class="lk">金額</span><input id="camt" class="fin" type="number" inputmode="numeric" placeholder="0"></label>
 <label class="row"><span class="lk">お店</span><input id="cname" class="fin" placeholder="お店の名前"></label>
 <label class="row"><span class="lk">カテゴリ</span><select id="ccat"></select></label>
+<label class="row"><span class="lk">区分</span><select id="ckind"><option value="やりくり">やりくり費</option><option value="特別費">特別費</option></select></label>
+<label class="row"><span class="lk">払った口座</span><select id="cacc"><option value="共有">共有口座・現金など</option><option value="貯蓄">貯蓄口座から</option></select></label>
 </div>
+<div class="rs" style="margin:8px 4px 12px">貯蓄口座から払うと、貯蓄口座の残高が減ります（共有口座の残高は変わりません）。「やりくり費」を選ぶと「今月あと使える」が減り、「特別費」なら減りません。</div>
 <button class="primary" onclick="cash()">記録する</button>
 </div>
 <div id="fIn" style="display:none">
 <div class="list">
-<label class="row"><span class="lk">口座</span><select id="iacc" onchange="accChg()"><option value="共有">共有口座に入金</option><option value="貯蓄入金">貯蓄口座に入金</option><option value="貯蓄出金">貯蓄口座から出金</option></select></label>
+<label class="row"><span class="lk">口座</span><select id="iacc" onchange="accChg()"><option value="共有">共有口座に入金</option><option value="貯蓄から振替">貯蓄口座 → 共有口座に振替</option><option value="貯蓄入金">貯蓄口座に入金</option><option value="貯蓄出金">貯蓄口座から出金</option></select></label>
 <label class="row"><span class="lk">金額</span><input id="iamt" class="fin" type="number" inputmode="numeric" placeholder="0"></label>
 <label class="row"><span class="lk">内容</span><input id="iname" class="fin" value="利息"></label>
 </div>
@@ -682,7 +685,8 @@ function txRow(t,i,detailOnly){
   var name=t.メモ||t.店舗||'（名前なし）';
   var h='<div class="row tap" onclick="'+(SELECTING&&!detailOnly?'pickTx':'openTx')+'('+i+')">'+(SELECTING&&!detailOnly?'<input class="cb" type="checkbox" aria-label="'+esc(name)+'を選択" '+(SELECTED.has(String(t.id))?'checked':'')+' onclick="event.stopPropagation();pickTx('+i+')">':'')+'<div class="grow"><div class="rt">'+esc(name)+
     (t.未確定?' <span class="badge">未確定</span>':'')+
-    (t.区分==='特別費'&&!t.補填?' <span class="badge b2">補填待ち</span>':'')+'</div>';
+    (t.区分==='特別費'&&!t.補填?' <span class="badge b2">補填待ち</span>':'')+
+    (t.補填&&String(t.補填).indexOf('貯蓄払い')===0?' <span class="badge b2">貯蓄から</span>':'')+'</div>';
   if(t.メモ&&t.店舗&&t.メモ!==t.店舗)h+='<div class="tiny">明細：'+esc(t.店舗)+'</div>';
   if(t.品目)h+='<div class="item">'+esc(t.品目)+'</div>';
   h+='<div class="rs">'+esc(t.日)+'・'+esc(t.カテゴリ)+(t.区分&&t.区分!=='やりくり'&&t.区分!=='特別費'?'・'+esc(t.区分):'')+'</div>';
@@ -833,7 +837,8 @@ function openTx(i){
   h+='<div class="group"><div class="row tap" onclick="nm('+i+')"><span class="grow" style="color:var(--blue)">お店の名前を直す</span><span class="chev">›</span></div>'+
     '<div class="row tap" onclick="amt('+i+')"><span class="grow" style="color:var(--blue)">金額を直す</span><span class="chev">›</span></div></div>';
   if(t.未確定)h+='<button class="primary" onclick="upd('+i+',{確認:1})">この店でOK</button>';
-  if(t.区分==='特別費')h+=t.補填?'<div class="scap">補填済み：'+esc(t.補填)+'</div>':'<button class="primary" style="background:var(--purple)" onclick="hoten('+i+')">貯蓄口座から補填した</button>';
+  if(t.補填&&String(t.補填).indexOf('貯蓄払い')===0)h+='<div class="scap">貯蓄口座から支払い済み（'+esc(String(t.補填).replace('貯蓄払い ',''))+'）</div>';
+  else if(t.区分==='特別費')h+=t.補填?'<div class="scap">補填済み：'+esc(t.補填)+'</div>':'<button class="primary" style="background:var(--purple)" onclick="hoten('+i+')">貯蓄口座から補填した</button>';
   h+='<div class="group"><div class="row tap" onclick="del('+i+')"><span class="grow" style="color:var(--red);text-align:center">この記録を消す</span></div></div>';
   $('txBody').innerHTML=h;
   openSheet('txSheet');
@@ -889,9 +894,15 @@ function amt(i){inputBox('正しい金額','',D.取引[i].金額,'number',functi
 function cash(){
   var a=$('camt').value,n=$('cname').value;
   if(!a||!n){alert('金額とお店を入れてください');return;}
-  call('apiCash',[K,a,n,$('ccat').value],function(j){$('camt').value='';$('cname').value='';show(j);});
+  var acc=$('cacc').value,kind=$('ckind').value;
+  call('apiCash',[K,a,n,$('ccat').value,kind,acc],function(j){$('camt').value='';$('cname').value='';$('ckind').value='やりくり';$('cacc').value='共有';show(j);});
 }
-function accChg(){$('iaddw').style.display=$('iacc').value==='共有'?'':'none';}
+function accChg(){
+  var v=$('iacc').value;
+  $('iaddw').style.display=(v==='共有'||v==='貯蓄から振替')?'':'none';
+  if(v==='貯蓄から振替'&&$('iname').value==='利息')$('iname').value='貯蓄から振替';
+  if(v!=='貯蓄から振替'&&$('iname').value==='貯蓄から振替')$('iname').value='利息';
+}
 function income(){
   var c=$('iacc').value,a=$('iamt').value,n=$('iname').value.trim()||'入金';
   if(!(Number(a)>0)){alert('金額をプラスの数字で入れてください');return;}
