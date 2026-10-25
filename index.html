@@ -216,6 +216,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div class="card" id="tip"></div>
 <div class="card" id="nomoney"></div>
 <div class="card" id="week"></div>
+<div class="card" id="pie"></div>
 </section>
 
 
@@ -410,6 +411,39 @@ function insRestore(){
   var now=(D.気づき||[]).map(insKey);
   insSetHidden(insHidden().filter(function(k){return now.indexOf(k)<0;}));
   $('ins').innerHTML=insHTML();
+}
+var PIEMODE='all';
+function setPie(m){PIEMODE=m;$('pie').innerHTML=pieHTML();}
+function pieHTML(){
+  var all=PIEMODE==='all',m={};
+  (D.取引||[]).forEach(function(t){
+    var a=Number(t.金額)||0;if(a<=0)return;
+    var n;
+    if(t.区分==='やりくり')n=foodCategory(t.カテゴリ);
+    else if(all&&t.区分==='固定費')n='固定費';
+    else if(all&&t.区分==='特別費')n='特別費';
+    else return;
+    m[n]=(m[n]||0)+a;
+  });
+  var list=Object.keys(m).map(function(k){return {n:k,v:m[k]};}).sort(function(a,b){return b.v-a.v;});
+  var total=0;list.forEach(function(x){total+=x.v;});
+  var h=head('var(--purple)','◔','今月の使い道',esc(D.月));
+  h+='<div class="segc"><button class="'+(all?'on':'')+'" onclick="setPie(\'all\')">すべて</button><button class="'+(all?'':'on')+'" onclick="setPie(\'life\')">生活費だけ</button></div>';
+  if(!total)return h+'<div class="rs">まだ支出がありません</div>';
+  var cum=0,arcs='';
+  list.forEach(function(x,i){
+    var p=x.v/total*100,col=PAL[i%PAL.length];x.col=col;x.p=p;
+    arcs+='<circle cx="50" cy="50" r="38" fill="none" pathLength="100" stroke-width="16" style="stroke:'+col+'" stroke-dasharray="'+Math.max(p-(list.length>1?0.5:0),0.1)+' '+(100-p+(list.length>1?0.5:0))+'" stroke-dashoffset="'+(-cum)+'" transform="rotate(-90 50 50)"/>';
+    cum+=p;
+  });
+  h+='<div style="display:flex;justify-content:center"><svg viewBox="0 0 100 100" width="200" height="200" role="img" aria-label="今月の使い道の円グラフ"><circle cx="50" cy="50" r="38" fill="none" stroke-width="16" style="stroke:var(--fill)"/>'+arcs+
+    '<text x="50" y="47" text-anchor="middle" font-size="6" style="fill:var(--sub)">'+(all?'今月の支出':'生活費')+'</text><text x="50" y="58" text-anchor="middle" font-size="10" font-weight="700" style="fill:var(--text)">'+total.toLocaleString('ja-JP')+'円</text></svg></div>';
+  h+='<div style="margin-top:6px">';
+  list.forEach(function(x){
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:.5px solid var(--sep)"><i style="width:10px;height:10px;border-radius:50%;background:'+x.col+';flex:none"></i><span style="flex:1">'+esc(x.n)+'</span><span class="tiny">'+(Math.round(x.p*10)/10)+'%</span><b style="min-width:84px;text-align:right">'+yen(x.v)+'</b></div>';
+  });
+  h+='</div><div class="tiny" style="margin-top:8px">貯蓄口座から払った分も入っています。入金・利息・残高合わせは入っていません。</div>';
+  return h;
 }
 function weekHTML(){
   var W=D.今週;
@@ -726,6 +760,7 @@ function show(json){
   $('ins').innerHTML=insHTML();
   $('nomoney').innerHTML=nmHTML();
   $('week').innerHTML=weekHTML();
+  $('pie').innerHTML=pieHTML();
   $('bank').innerHTML=bankHTML();
   $('cats').innerHTML=catHTML(D.集計);
   $('budStatus').innerHTML=budHTML();
