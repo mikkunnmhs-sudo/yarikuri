@@ -317,7 +317,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div id="fixres"></div>
 </div>
 <div class="card" id="goals"></div>
-<div class="card"><details><summary>通知メールと同じ文章</summary><pre id="text"></pre></details></div>
+<div class="card"><details><summary>通知メールと同じ文章</summary><div id="text"></div></details></div>
 </section>
 
 <nav class="tabbar">
@@ -468,6 +468,26 @@ function catHomeHTML(){
     h+='<div class="crow" style="padding:8px 0"><div class="top"><span>'+esc(k==='食費'?'食費（食料品・外食・コンビニ）':k)+'</span><b'+(over?' class="up"':'')+'>'+(over?yen(-r)+' オーバー':'あと '+yen(r))+'</b></div>'+
       '<div class="cbar"><i style="width:'+w+'%;background:'+(over?'var(--red)':(w>=80?'var(--orange)':'var(--teal)'))+'"></i></div>'+
       '<div class="tiny">'+yen(u)+' 使用 ／ 予算 '+yen(b)+'</div></div>';
+  });
+  return h;
+}
+/* 通知メールと同じ見た目（上に枠、下に色つきの文章）。枠に出した行は下に重ねない */
+function mailHTML(s){
+  var g=D.信号||'注意',col={順調:'var(--green)',注意:'var(--orange)',ピンチ:'var(--red)'}[g]||'var(--text)';
+  var h='<div style="border:1px solid var(--sep);border-radius:12px;padding:12px 14px;margin:10px 0">'+
+    '<div class="k">口座の残高</div><div style="font-size:28px;font-weight:700;line-height:1.2">'+num(D.実残高)+'</div>'+
+    '<div style="margin-top:8px">今月あと <b style="font-size:17px;color:'+(D.残り<0?'var(--red)':'var(--text)')+'">'+yen(D.残り)+'</b><span class="rs"> ／'+yen(D.やりくり費)+'</span> <span class="pill bg'+esc(g)+'" style="margin-top:0">'+esc(g)+'</span></div>'+
+    '<div class="cbar"><i style="width:'+Math.round(Math.max(0,Math.min(1,D.割合||0))*100)+'%;background:'+col+'"></i></div>'+
+    '<div style="margin-top:6px">今日あと <b style="font-size:17px;color:'+(D.今日あと<0?'var(--red)':col)+'">'+yen(Math.max(0,D.今日あと))+'</b></div></div>';
+  var L=String(s||'').split('\n').filter(function(l){l=l.trim();return !/^(今日あと使える額：|口座の残高（計算上）)/.test(l)&&!/^[█░│]/.test(l);});
+  while(L.length&&/^\s*(─+)?\s*$/.test(L[0]))L.shift();
+  L.forEach(function(l){
+    var x=l.trim(),m;
+    if(!x){h+='<div style="height:6px"></div>';return;}
+    if(/^─+$/.test(x)){h+='<hr style="border:none;border-top:.5px solid var(--sep);margin:8px 0">';return;}
+    var e=esc(x).replace(/(-?[\d,]+円)/g,'<b>$1</b>').replace(/(オーバー|使いすぎ|赤字|足りません|超過)/g,'<b style="color:var(--red)">$1</b>').replace(/(余裕あり|予算内|黒字)/g,'<b style="color:var(--green)">$1</b>');
+    if((m=x.match(/^【(順調|注意|ピンチ)】/))){h+='<div style="margin:4px 0"><span class="pill bg'+m[1]+'" style="margin-top:0">'+m[1]+'</span> '+e.replace(/^【(順調|注意|ピンチ)】/,'')+'</div>';return;}
+    h+='<div style="font-size:14px;line-height:1.6">'+e+'</div>';
   });
   return h;
 }
@@ -795,7 +815,7 @@ function show(json){
   $('budStatus').innerHTML=budHTML();
   $('fixed').innerHTML=fixHTML(D.固定費);
   $('goals').innerHTML=goalsHTML();
-  $('text').textContent=D.文||'';
+  $('text').innerHTML=mailHTML(D.文||'');
   $('ccat').innerHTML=opts(D.cats,'食料品');
   var sp=[],spSum=0;
   (D.取引||[]).forEach(function(t,i){
