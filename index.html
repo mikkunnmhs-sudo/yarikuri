@@ -45,6 +45,11 @@ h1{margin:0;font-size:34px;font-weight:700;letter-spacing:-.02em}
 .u{font-size:.45em;font-weight:600;color:var(--sub);margin-left:2px;letter-spacing:0}
 .v{font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
 .k{font-size:13px;font-weight:600;color:var(--sub)}
+.todayv{font-size:52px;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+#tab-home .hero{font-size:32px}
+details.more{margin-bottom:12px}
+details.more>summary{justify-content:center;background:var(--card);border-radius:14px;padding:13px 16px;color:var(--blue);font-weight:600;font-size:15px;margin-bottom:12px}
+details.more[open]>summary .chev{transform:rotate(90deg)}
 .rs{font-size:13px;color:var(--sub);margin-top:2px}
 .tiny{font-size:11px;color:var(--sub);margin-top:1px}
 .item{font-size:14px;margin-top:2px;opacity:.85}
@@ -198,6 +203,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 
 <!-- ===== ホーム ===== -->
 <section id="tab-home">
+<div class="card" id="today"><div class="k">今日あと使える</div><div class="todayv" id="perday">--</div><div class="rs" id="perdaySub"></div></div>
 <div class="card">
 <div class="chead"><span class="ico bg順調" id="heroIco">¥</span><span class="ct 順調" id="heroLbl">今月あと使える</span><span class="cr" id="month"></span></div>
 <div class="herow">
@@ -209,14 +215,14 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div class="note" id="note"></div>
 </div>
 <div class="card" id="bank"></div>
-<div class="tiles">
-<div class="card"><div class="k">今日の目安（1日あたり）</div><div class="v" id="perday">--</div><div class="rs" id="perdaySub"></div></div>
-</div>
+<div class="card" id="catHome"></div>
 <div class="card" id="ins"></div>
 <div class="card" id="tip"></div>
+<details class="more"><summary>くわしく見る（ノーマネーデー・今週・円グラフ）<span class="chev">›</span></summary>
 <div class="card" id="nomoney"></div>
 <div class="card" id="week"></div>
 <div class="card" id="pie"></div>
+</details>
 </section>
 
 
@@ -443,6 +449,21 @@ function pieHTML(){
     h+='<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:.5px solid var(--sep)"><i style="width:10px;height:10px;border-radius:50%;background:'+x.col+';flex:none"></i><span style="flex:1">'+esc(x.n)+'</span><span class="tiny">'+(Math.round(x.p*10)/10)+'%</span><b style="min-width:84px;text-align:right">'+yen(x.v)+'</b></div>';
   });
   h+='</div><div class="tiny" style="margin-top:8px">貯蓄口座から払った分も入っています。入金・利息・残高合わせは入っていません。</div>';
+  return h;
+}
+function catHomeHTML(){
+  var A=D.集計;if(!A)return '';
+  var M=categoryBudgets(),used={};
+  (A.カテゴリ||[]).forEach(function(c){var k=isFood(c.名前)?'食費':c.名前;used[k]=(used[k]||0)+(Number(c.今月)||0);});
+  var ks=Object.keys(M).filter(function(k){return Number(M[k])>0;}).sort(function(a,b){return a==='食費'?-1:(b==='食費'?1:Number(M[b])-Number(M[a]));});
+  if(!ks.length)return '';
+  var h=head('var(--orange)','▦','カテゴリの残り',esc(D.月));
+  ks.forEach(function(k){
+    var b=Number(M[k]),u=used[k]||0,r=b-u,over=r<0,w=Math.max(0,Math.min(100,u/b*100));
+    h+='<div class="crow" style="padding:8px 0"><div class="top"><span>'+esc(k==='食費'?'食費（食料品・外食・コンビニ）':k)+'</span><b'+(over?' class="up"':'')+'>'+(over?yen(-r)+' オーバー':'あと '+yen(r))+'</b></div>'+
+      '<div class="cbar"><i style="width:'+w+'%;background:'+(over?'var(--red)':(w>=80?'var(--orange)':'var(--teal)'))+'"></i></div>'+
+      '<div class="tiny">'+yen(u)+' 使用 ／ 予算 '+yen(b)+'</div></div>';
+  });
   return h;
 }
 function weekHTML(){
@@ -741,7 +762,7 @@ function show(json){
   $('heroLbl').className='ct '+g;
   $('month').textContent=D.月||'';
   $('rest').innerHTML=num(D.残り);
-  $('of').textContent=yen(D.やりくり費)+' 中（やりくり費）';
+  $('of').textContent=yen(D.やりくり費)+' 中（今月使えるお金）';
   var s=$('sig');s.className='pill bg'+g;
   s.textContent=D.差>=0?'順調・目標より '+yen(D.差)+' 余裕':g+'・目標より '+yen(-D.差)+' 使いすぎ';
   var rf=$('ringFg');rf.setAttribute('class','fg s'+g);rf.style.strokeDashoffset=RING*(1-ratio);
@@ -751,8 +772,11 @@ function show(json){
   var nw=new Date(),dim=new Date(nw.getFullYear(),nw.getMonth()+1,0).getDate(),tgt=(dim-nw.getDate())/dim;
   $('line').style.left=Math.max(0,Math.min(1,tgt))*100+'%';
   $('pct').textContent='残り '+pct(D.割合)+'%　縦の線＝今日の目標ライン '+pct(tgt)+'%（あと'+(dim-nw.getDate())+'日ぶん）';
-  $('perday').innerHTML=num(D.今日あと);
-  $('perdaySub').textContent='月末まであと'+dn+'日';
+  $('perday').innerHTML=num(Math.max(0,D.今日あと));
+  var tc={順調:'var(--green)',注意:'var(--orange)',ピンチ:'var(--red)'}[g]||'var(--text)';if(D.今日あと<0||D.残り<=0)tc='var(--red)';
+  $('perday').style.color=tc;
+  $('perdaySub').textContent=(D.今日あと<0?'今日の目安を '+yen(-D.今日あと)+' オーバー・':'')+'今月あと '+yen(D.残り)+'・月末まであと'+dn+'日';
+  $('catHome').innerHTML=catHomeHTML();
   var n=[];
   if(D.固定費&&D.固定費.取り置き)n.push('取り置き '+yen(D.固定費.取り置き)+'（来月引き落とし分。上の金額からは先に引いてあります）');
   if(D.予備)n.push(D.残り<0?'予備費 '+yen(D.予備)+' から出している状態です':'予備費 '+yen(D.予備)+' は別にとってあります');
