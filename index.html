@@ -216,6 +216,11 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 </div>
 <div class="card" id="bank"></div>
 <div class="card" id="catHome"></div>
+<div class="card" id="aiHome"><div class="chead"><span class="ico aigrad">✦</span><span class="ct">AIにまかせる</span></div><div class="aibtns">
+<label class="aibtn"><input type="file" accept="image/*" style="display:none" onchange="tab('rec');pickReceipt(this)"><span class="ico" style="background:var(--green)">◎</span>レシートを撮って記録</label>
+<button class="aibtn" onclick="tab('ask')"><span class="ico" style="background:var(--purple)">？</span>これ買っていい？と相談する</button>
+<button class="aibtn" onclick="tab('rep');setTimeout(function(){var e=$('budStatus');if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},80)"><span class="ico" style="background:var(--orange)">▦</span>予算をAIと見直す</button>
+</div></div>
 <div class="card" id="ins"></div>
 <div class="card" id="tip"></div>
 <details class="more"><summary>くわしく見る（ノーマネーデー・今週・円グラフ）<span class="chev">›</span></summary>
