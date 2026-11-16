@@ -491,10 +491,51 @@ function mailHTML(s){
   });
   return h;
 }
+var WEEKOFF=0,WEEKS={};
+function weekNav(d){
+  var n=Math.min(0,WEEKOFF+d);if(n===WEEKOFF)return;
+  WEEKOFF=n;$('week').innerHTML=weekHTML();
+  if(n===0||WEEKS[n])return;
+  call('apiWeek',[K,n],function(j){WEEKS[n]=JSON.parse(j);if(WEEKOFF===n)$('week').innerHTML=weekHTML();},function(){WEEKOFF=0;$('week').innerHTML=weekHTML();});
+}
+function weekNavHTML(label){
+  var bs='width:44px;height:36px;border-radius:9px;background:var(--fill);font-size:22px;line-height:1;color:var(--blue)';
+  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px"><button style="'+bs+'" onclick="weekNav(-1)" aria-label="前の週">‹</button><b style="font-size:14px;text-align:center">'+esc(label)+'</b><button style="'+bs+(WEEKOFF===0?';opacity:.3':'')+'" '+(WEEKOFF===0?'disabled ':'')+'onclick="weekNav(1)" aria-label="次の週">›</button></div>';
+}
+function weekDays(L,lim){
+  var mx=Math.max(lim,1),h='<div style="margin-top:10px">';
+  L.forEach(function(d){if(d.合計>mx)mx=d.合計;});
+  L.forEach(function(d){
+    var over=d.合計>lim;
+    var bar='<span class="cbar"><i style="width:'+(d.合計?Math.max(3,d.合計/mx*100):0)+'%;background:'+(over?'var(--red)':'var(--teal)')+'"></i></span>';
+    var lab='<span class="d">'+esc(d.日)+'</span>';
+    var am='<span class="amt'+(over?' up':'')+'">'+yen(d.合計)+'</span>';
+    if(d.明細.length){
+      h+='<details class="wday"><summary>'+lab+bar+am+'</summary><div class="mx">'+
+        d.明細.map(function(t){return '<div class="top"><span>'+esc(t.時刻)+' '+esc(t.名前)+' <span class="tiny">'+esc(t.カテゴリ)+'</span></span><span>'+yen(t.金額)+'</span></div>';}).join('')+'</div></details>';
+    }else{
+      h+='<div class="wday"><div style="display:flex;align-items:center;gap:10px">'+lab+bar+am+'</div></div>';
+    }
+  });
+  return h+'</div>';
+}
 function weekHTML(){
   var W=D.今週;
-  var h=head('var(--teal)','7','今週のやりくり',W?esc(W.期間):'');
+  var past=WEEKOFF<0,Q=past?WEEKS[WEEKOFF]:null;
+  var h=head('var(--teal)','7',WEEKOFF===0?'今週のやりくり':(WEEKOFF===-1?'先週のやりくり':(-WEEKOFF)+'週間前のやりくり'),'');
   if(!W)return h+'<div class="rs">読み込み中…</div>';
+  h+=weekNavHTML(past?(Q?Q.期間:'読み込み中…'):W.期間);
+  if(past){
+    if(!Q)return h+'<div class="rs">読み込み中…（数秒かかります）</div>';
+    var dq=Q.使った-Q.目安週;
+    h+='<div class="v">'+num(Q.使った)+'</div>';
+    h+='<div class="rs">月曜〜日曜（7日間）・'+Q.件数+'件　1週間の目安 '+yen(Q.目安週)+'</div>';
+    h+='<span class="pill bg'+(dq<=0?'順調':(dq<=Q.目安1日?'注意':'ピンチ'))+'" style="margin-top:8px">'+(dq<=0?'目安より '+yen(-dq)+' 少ない':'目安より '+yen(dq)+' 多い')+'</span>';
+    h+=weekDays(Q.日別,Q.目安1日);
+    var c2=W.使った-Q.使った;
+    h+='<div class="wcmp"><span>今週（今日まで）</span><b>'+yen(W.使った)+'</b><span>　→ この週とくらべて</span><b><span class="'+(c2>0?'up':'down')+'">'+sgn(c2)+yen(Math.abs(c2))+'</span></b></div>';
+    return h+'<div class="tiny" style="margin-top:6px">‹ › で前の週・次の週に移れます。赤いバー＝1日の目安 '+yen(Q.目安1日)+' を超えた日。日付をタップすると明細が開きます。目安は今月のやりくり費で計算しています</div>';
+  }
   var diff=W.使った-W.目安今日まで;
   h+='<div class="v">'+num(W.使った)+'</div>';
   h+='<div class="rs">月曜〜今日（'+W.経過+'日間）・'+W.件数+'件　1週間の目安 '+yen(W.目安週)+'</div>';
