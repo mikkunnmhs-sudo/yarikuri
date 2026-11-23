@@ -243,7 +243,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 <div id="aires"></div>
 </div>
 <div class="card">
-<div class="segc"><button id="segOut" class="on" onclick="seg(0)">支出（現金・貯蓄から）</button><button id="segIn" onclick="seg(1)">入金（利息など）</button></div>
+<div class="segc"><button id="segOut" class="on" onclick="seg(0)">支出（現金・貯蓄から）</button><button id="segIn" onclick="seg(1)">入金・口座の移動</button></div>
 <div id="fOut">
 <div class="list">
 <label class="row"><span class="lk">金額</span><input id="camt" class="fin" type="number" inputmode="numeric" placeholder="0"></label>
@@ -257,7 +257,7 @@ pre{white-space:pre-wrap;font-size:13px;margin:10px 0 0;font-family:inherit;colo
 </div>
 <div id="fIn" style="display:none">
 <div class="list">
-<label class="row"><span class="lk">口座</span><select id="iacc" onchange="accChg()"><option value="共有">共有口座に入金</option><option value="貯蓄から振替">貯蓄口座 → 共有口座に振替</option><option value="貯蓄入金">貯蓄口座に入金</option><option value="貯蓄出金">貯蓄口座から出金</option></select></label>
+<label class="row"><span class="lk">口座</span><select id="iacc" onchange="accChg()"><option value="共有">共有口座に入金</option><option value="貯蓄から振替">貯蓄口座 → 共有口座に振替</option><option value="貯蓄入金">貯蓄口座に入金</option><option value="貯蓄出金">貯蓄口座から出金</option><option value="共有から移動">共有口座 → 他の口座へ移動（妻の口座など）</option></select></label>
 <label class="row"><span class="lk">金額</span><input id="iamt" class="fin" type="number" inputmode="numeric" placeholder="0"></label>
 <label class="row"><span class="lk">内容</span><input id="iname" class="fin" value="利息"></label>
 </div>
@@ -1024,9 +1024,10 @@ function cash(){
 }
 function accChg(){
   var v=$('iacc').value;
-  $('iaddw').style.display=(v==='共有'||v==='貯蓄から振替')?'':'none';
-  if(v==='貯蓄から振替'&&$('iname').value==='利息')$('iname').value='貯蓄から振替';
-  if(v!=='貯蓄から振替'&&$('iname').value==='貯蓄から振替')$('iname').value='利息';
+  $('iaddw').style.display=(v==='共有'||v==='貯蓄から振替'||v==='共有から移動')?'':'none';
+  $('iaddw').textContent=v==='共有から移動'?'共有口座の残高だけ減らします（やりくり費にも特別費にも数えません）':'入金は口座の残高だけ増やします（今月あと使える額には入りません）';
+  var nm=$('iname').value,auto=['利息','貯蓄から振替','妻の口座へ移動'];
+  if(auto.indexOf(nm)>=0||!nm)$('iname').value=v==='貯蓄から振替'?'貯蓄から振替':v==='共有から移動'?'妻の口座へ移動':'利息';
 }
 function income(){
   var c=$('iacc').value,a=$('iamt').value,n=$('iname').value.trim()||'入金';
