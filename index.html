@@ -153,6 +153,10 @@ input,select{font:inherit;font-size:17px;color:var(--text);background:transparen
 .trleg i{display:inline-block;width:16px;height:0;border-top:2.5px solid var(--orange);vertical-align:middle;margin-right:4px}
 .trleg i.p{border-top:2.5px dotted var(--sub)}
 .trleg i.g{border-top:2px dashed var(--teal)}
+.trsvg{touch-action:pan-y;-webkit-user-select:none;user-select:none;cursor:crosshair}
+.trhint{font-size:11px}
+.trcmp{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--sub);margin-top:6px;font-variant-numeric:tabular-nums}
+.trdh{font-size:13px;font-weight:600;margin:10px 0 2px;color:var(--text)}
 .shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .shead b{font-size:17px}
 .sp{width:56px}
@@ -493,14 +497,14 @@ function catHomeHTML(){
 var TR=null,TRBUSY=false,TRSEL='全体';
 try{TRSEL=localStorage.getItem('yktrsel')||'全体';}catch(x){}
 function trendLoad(){
-  if(!TR){try{var c=localStorage.getItem('yktr');if(c){TR=JSON.parse(c);$('trend').innerHTML=trendHTML();}}catch(x){}}
+  if(!TR){try{var c=localStorage.getItem('yktr');if(c){TR=JSON.parse(c);trPaint();}}catch(x){}}
   if(TRBUSY||!K)return;TRBUSY=true;
   fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:'apiTrend',args:[K]})})
     .then(function(r){return r.json();})
-    .then(function(j){TRBUSY=false;if(!j||!j.ok)return;TR=JSON.parse(j.data);try{localStorage.setItem('yktr',j.data);}catch(x){}try{$('trend').innerHTML=trendHTML();}catch(e){}})
+    .then(function(j){TRBUSY=false;if(!j||!j.ok)return;TR=JSON.parse(j.data);try{localStorage.setItem('yktr',j.data);}catch(x){}try{trPaint();}catch(e){}})
     .catch(function(){TRBUSY=false;});
 }
-function trSel(c){TRSEL=c;try{localStorage.setItem('yktrsel',c);}catch(x){}$('trend').innerHTML=trendHTML();}
+function trSel(c){TRSEL=c;TRDAY=null;try{localStorage.setItem('yktrsel',c);}catch(x){}trPaint();}
 function trKey(c){return isFood(c)?'食費':c;}
 function trCum(M,sel,upto){
   var a=[],s=0,E=(M&&M.日別)||{};
@@ -516,10 +520,13 @@ function trCats(){
 }
 function trMan(v){v=Math.round(v);return v>=10000?(Math.round(v/1000)/10)+'万':v.toLocaleString('ja-JP');}
 function trStep(mx){var r=mx/4,p=Math.pow(10,Math.floor(Math.log10(Math.max(r,1)))),m=r/p;return (m<=1?1:(m<=2?2:(m<=5?5:10)))*p;}
+/* 取引の「日」の文字から日にちを取り出す（11/23, 2026/11/23, 11月23日 などに対応） */
+function trTxDay(s){var m=String(s||'').match(/(?:^|[^\d])(\d{1,2})[\/月\-.](\d{1,2})(?!\d)/);return m?Number(m[2]):0;}
+var TRV=null,TRDAY=null;
 function trendHTML(){
   if(!D)return '';
   var h=head('var(--orange)','↗','支出の推移',esc(D.月||''));
-  if(!TR||!TR.今月||(D.ym&&TR.今月.ym!==D.ym))return h+'<div class="rs">読み込み中…</div>';
+  if(!TR||!TR.今月||(D.ym&&TR.今月.ym!==D.ym)){TRV=null;return h+'<div class="rs">読み込み中…</div>';}
   var cats=trCats();if(TRSEL!=='全体'&&cats.indexOf(TRSEL)<0)TRSEL='全体';
   h+='<div class="trchips">'+['全体'].concat(cats).map(function(c){return '<button class="'+(c===TRSEL?'on':'')+'" data-c="'+esc(c)+'" onclick="trSel(this.dataset.c)">'+esc(c)+'</button>';}).join('')+'</div>';
   var C=TR.今月,P=TR.先月||{日数:0,日別:{}},all=TRSEL==='全体';
@@ -535,39 +542,91 @@ function trendHTML(){
     var cAt=function(k){return k<=0?0:pf[Math.min(k,PN)-1];};
     for(var gd=1;gd<=days;gd++){var fr;if(ptot>0){var x=gd*PN/days,i0=Math.floor(x);fr=(cAt(i0)+(cAt(i0+1)-cAt(i0))*(x-i0))/ptot;}else fr=gd/days;guide.push((all?fix:0)+gb*fr);}
   }
-  h+='<div class="trhead"><div class="k">'+mo+'月1日〜'+mo+'月'+today+'日の'+(all?'支出':esc(TRSEL))+'</div>';
-  h+='<div class="trbig">'+Math.round(spent).toLocaleString('ja-JP')+'<span class="u">円</span></div>';
-  if(budget>0){var r=budget-spent;h+='<div class="trsub">'+(r>=0?'あと <b>'+Math.round(r).toLocaleString('ja-JP')+'</b> 円':'<span class="up"><b>'+Math.round(-r).toLocaleString('ja-JP')+'</b> 円 オーバー</span>')+' / '+Math.round(budget).toLocaleString('ja-JP')+' 円</div>';}
-  else h+='<div class="trsub">予算なし</div>';
-  h+='</div>';
-  // グラフ
+  // グラフの座標
   var W=340,H=200,L=6,R=W-40,T=10,Bm=H-22,mx=Math.max(budget,spent,prev.length?prev[prev.length-1]:0,1);
   var st=trStep(mx*1.03),top=Math.ceil(mx*1.03/st)*st;
   var X=function(d){return L+d/days*(R-L);},Y=function(v){return Bm-v/top*(Bm-T);};
-  var g='<svg class="trsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc((all?'支出':TRSEL)+'の推移。今月 '+yen(spent)+(budget>0?'、予算 '+yen(budget):''))+'">';
+  var pm=Number(String(P.ym||'').slice(5))||'';
+  TRV={cur:cur,prev:prev,guide:guide,days:days,today:today,budget:budget,all:all,mo:mo,pm:pm,fix:fix,sel:TRSEL,X:X,Y:Y,W:W,T:T,Bm:Bm,L:L,R:R,C:C};
+  if(TRDAY!=null&&(TRDAY<1||TRDAY>today))TRDAY=null;
+  var day=TRDAY||today;
+  h+='<div class="trhead" id="trhd">'+trHeadIn(day)+'</div>';
+  var g='<svg class="trsvg" id="trsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc((all?'支出':TRSEL)+'の推移。今月 '+yen(spent)+(budget>0?'、予算 '+yen(budget):'')+'。なぞると日ごとの合計が出ます')+'">';
   var by=budget>0?Y(budget):-99;
   for(var v=0;v<=top+0.5;v+=st){var y=Y(v);g+='<line x1="'+L+'" x2="'+R+'" y1="'+y+'" y2="'+y+'" style="stroke:var(--sep);stroke-width:1"/>';if(Math.abs(y-by)>12)g+='<text x="'+(W-2)+'" y="'+(y+4)+'" text-anchor="end">'+trMan(v)+'</text>';}
   if(budget>0)g+='<line x1="'+L+'" x2="'+R+'" y1="'+by+'" y2="'+by+'" style="stroke:var(--sub);stroke-width:1.2"/><text x="'+(W-2)+'" y="'+(by+4)+'" text-anchor="end" style="fill:var(--text);font-weight:600">予算</text>';
   var pts=function(a){var s=X(0)+','+Y(0);a.forEach(function(v,i){s+=' '+X(i+1)+','+Y(v);});return s;};
   if(prev.length)g+='<polyline points="'+pts(prev)+'" style="fill:none;stroke:var(--sub);stroke-width:2.5;stroke-dasharray:1 5;stroke-linecap:round;stroke-linejoin:round;opacity:.9"/>';
   if(guide.length)g+='<polyline points="'+pts(guide)+'" style="fill:none;stroke:var(--teal);stroke-width:2;stroke-dasharray:6 4;stroke-linejoin:round"/>';
-  var over=budget>0&&spent>budget,col=over?'var(--red)':'var(--orange)';
+  var over=budget>0&&spent>budget,col=over?'var(--red)':'var(--orange)';TRV.col=col;
   g+='<polygon points="'+pts(cur)+' '+X(today)+','+Y(0)+'" style="fill:'+col+';opacity:.2"/>';
   g+='<polyline points="'+pts(cur)+'" style="fill:none;stroke:'+col+';stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/>';
-  g+='<circle cx="'+X(today)+'" cy="'+Y(spent)+'" r="5" style="fill:var(--card);stroke:'+col+';stroke-width:2.5"/>';
   [1,8,15,22,29].forEach(function(d){if(d<=days)g+='<text x="'+Math.min(R-6,Math.max(L+10,X(d-0.5)))+'" y="'+(H-4)+'" text-anchor="middle">'+d+'日</text>';});
+  g+='<g id="trcur">'+trCurIn(day)+'</g>';
+  g+='<rect x="0" y="0" width="'+W+'" height="'+H+'" style="fill:transparent"/>';
   g+='</svg>';
   h+=g;
-  var pm=Number(String(P.ym||'').slice(5))||'',pd=Math.min(today,pdays),pv=pd?prev[pd-1]:null;
-  h+='<div class="trleg"><span><i></i>今月　<i class="p"></i>先月'+(pm?'（'+pm+'月）':'')+(guide.length?'　<i class="g"></i>目安':'')+'</span>';
-  if(pv!=null){var c2=spent-pv;h+='<span>先月の'+pd+'日まで '+yen(pv)+'　<b class="'+(c2>0?'up':'down')+'">'+sgn(c2)+yen(Math.abs(c2))+'</b></span>';}
-  if(guide.length){var gv=guide[today-1],c3=spent-gv;h+='<span>目安の'+today+'日まで '+yen(gv)+'　<b class="'+(c3>0?'up':'down')+'">'+sgn(c3)+yen(Math.abs(c3))+'</b></span>';}
-  h+='</div>';
+  h+='<div class="trleg"><span><i></i>今月　<i class="p"></i>先月'+(pm?'（'+pm+'月）':'')+(guide.length?'　<i class="g"></i>目安':'')+'</span><span class="trhint">グラフをなぞると日ごとに見られます</span></div>';
+  h+='<div id="trday">'+trDayIn(day)+'</div>';
   if(guide.length)h+='<div class="tiny" style="margin-top:6px">目安＝先月と同じペースの使い方で、月末にちょうど予算になる線</div>';
-  if(all)h+='<div class="tiny" style="margin-top:6px">固定費（今月 '+yen(fix)+'・先月 '+yen(pfix)+'）は1日目にまとめて入れています。特別費と口座の移動は入れていません</div>';
+  if(all)h+='<div class="tiny" style="margin-top:6px">固定費（今月 '+yen(fix)+'・先月 '+yen(Number(P.固定費)||0)+'）は1日目にまとめて入れています。特別費と口座の移動は入れていません</div>';
   else h+='<div class="tiny" style="margin-top:6px">やりくり費だけを集計しています'+(TRSEL==='食費'?'（食料品・外食・コンビニの合計）':'')+'</div>';
   return h;
 }
+/* 選んだ日（d日）までの合計・残り */
+function trHeadIn(d){
+  var V=TRV,s=V.cur[d-1]||0,b=V.budget;
+  var h='<div class="k">'+V.mo+'月1日〜'+V.mo+'月'+d+'日の'+(V.all?'支出':esc(V.sel))+'</div>';
+  h+='<div class="trbig">'+Math.round(s).toLocaleString('ja-JP')+'<span class="u">円</span></div>';
+  if(b>0){var r=b-s;h+='<div class="trsub">'+(r>=0?'あと <b>'+Math.round(r).toLocaleString('ja-JP')+'</b> 円':'<span class="up"><b>'+Math.round(-r).toLocaleString('ja-JP')+'</b> 円 オーバー</span>')+' / '+Math.round(b).toLocaleString('ja-JP')+' 円</div>';}
+  else h+='<div class="trsub">予算なし</div>';
+  return h;
+}
+/* 縦の線と点・吹き出し */
+function trCurIn(d){
+  var V=TRV,x=V.X(d),y=V.Y(V.cur[d-1]||0),h='';
+  if(d!==V.today||TRDAY)h+='<line x1="'+x+'" x2="'+x+'" y1="'+V.T+'" y2="'+V.Bm+'" style="stroke:var(--sub);stroke-width:1.5"/>';
+  h+='<circle cx="'+x+'" cy="'+y+'" r="5" style="fill:var(--card);stroke:'+V.col+';stroke-width:2.5"/>';
+  if(TRDAY){
+    var f1=d===1&&V.all&&V.fix>0,amt=(V.cur[d-1]||0)-(d>1?V.cur[d-2]:0)-(f1?V.fix:0);
+    var txt=d+'日に '+yen(amt)+(f1?'＋固定費':'');
+    var w=Math.max(60,txt.length*11+16),bx=Math.max(0,Math.min(V.W-w,x-w/2));
+    h+='<rect x="'+bx+'" y="'+(V.T-8)+'" rx="10" width="'+w+'" height="22" style="fill:var(--card);stroke:var(--sep);stroke-width:1"/>';
+    h+='<text x="'+(bx+w/2)+'" y="'+(V.T+7)+'" text-anchor="middle" style="fill:var(--text);font-weight:600;font-size:12px">'+esc(txt)+'</text>';
+  }
+  return h;
+}
+/* その日の比較と、その日に使ったもの */
+function trDayIn(d){
+  var V=TRV,s=V.cur[d-1]||0,h='<div class="trcmp">';
+  if(V.prev.length>=d){var pv=V.prev[d-1],c2=s-pv;h+='<span>先月の'+d+'日まで '+yen(pv)+'　<b class="'+(c2>0?'up':'down')+'">'+sgn(c2)+yen(Math.abs(c2))+'</b></span>';}
+  if(V.guide.length){var gv=V.guide[d-1],c3=s-gv;h+='<span>目安の'+d+'日まで '+yen(gv)+'　<b class="'+(c3>0?'up':'down')+'">'+sgn(c3)+yen(Math.abs(c3))+'</b></span>';}
+  h+='</div>';
+  var rows=[],sum=0;
+  (D.取引||[]).forEach(function(t,i){
+    if(trTxDay(t.日)!==d)return;
+    var ok=V.all?(t.区分==='やりくり'||t.区分==='固定費'):(t.区分==='やりくり'&&trKey(t.カテゴリ)===V.sel);
+    if(!ok)return;rows.push(txRow(t,i,true));sum+=Number(t.金額)||0;
+  });
+  h+='<div class="trdh">'+V.mo+'月'+d+'日に使ったもの'+(rows.length?'　'+rows.length+'件・'+yen(sum):'')+'</div>';
+  h+=rows.length?'<div class="list">'+rows.join('')+'</div>':'<div class="rs">この日の支出はありません</div>';
+  return h;
+}
+function trPick(d){
+  if(!TRV)return;d=Math.max(1,Math.min(TRV.today,d));
+  if(TRDAY===d)return;TRDAY=d;
+  $('trhd').innerHTML=trHeadIn(d);$('trcur').innerHTML=trCurIn(d);$('trday').innerHTML=trDayIn(d);
+}
+function trBind(){
+  var s=$('trsvg');if(!s||!TRV)return;
+  var at=function(e){var r=s.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*TRV.W;return Math.round((vx-TRV.L)/(TRV.R-TRV.L)*TRV.days);};
+  var down=false;
+  s.addEventListener('pointerdown',function(e){down=true;try{s.setPointerCapture(e.pointerId);}catch(x){}trPick(at(e));});
+  s.addEventListener('pointermove',function(e){if(down)trPick(at(e));});
+  var up=function(){down=false;};
+  s.addEventListener('pointerup',up);s.addEventListener('pointercancel',up);
+}
+function trPaint(){$('trend').innerHTML=trendHTML();trBind();}
 /* 通知メールと同じ見た目（上に枠、下に色つきの文章）。枠に出した行は下に重ねない */
 function mailHTML(s){
   var g=D.信号||'注意',col={順調:'var(--green)',注意:'var(--orange)',ピンチ:'var(--red)'}[g]||'var(--text)';
@@ -940,7 +999,7 @@ function show(json){
   $('perday').style.color=tc;
   $('perdaySub').textContent=(D.今日あと<0?'今日の目安を '+yen(-D.今日あと)+' オーバー・':'')+'今月あと '+yen(D.残り)+'・月末まであと'+dn+'日';
   $('catHome').innerHTML=catHomeHTML();
-  try{$('trend').innerHTML=trendHTML();trendLoad();}catch(e){$('trend').innerHTML='';}
+  try{trPaint();trendLoad();}catch(e){$('trend').innerHTML='';}
   var n=[];
   if(D.固定費&&D.固定費.取り置き)n.push('取り置き '+yen(D.固定費.取り置き)+'（来月引き落とし分。上の金額からは先に引いてあります）');
   if(D.予備)n.push(D.残り<0?'予備費 '+yen(D.予備)+' から出している状態です':'予備費 '+yen(D.予備)+' は別にとってあります');
