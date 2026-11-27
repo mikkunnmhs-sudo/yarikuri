@@ -514,7 +514,7 @@ function trCats(){
   return L;
 }
 function trMan(v){v=Math.round(v);return v>=10000?(Math.round(v/1000)/10)+'万':v.toLocaleString('ja-JP');}
-function trStep(mx){var r=mx/3,p=Math.pow(10,Math.floor(Math.log10(Math.max(r,1)))),m=r/p;return (m<=1?1:(m<=2?2:(m<=5?5:10)))*p;}
+function trStep(mx){var r=mx/4,p=Math.pow(10,Math.floor(Math.log10(Math.max(r,1)))),m=r/p;return (m<=1?1:(m<=2?2:(m<=5?5:10)))*p;}
 function trendHTML(){
   if(!D)return '';
   var h=head('var(--orange)','↗','支出の推移',esc(D.月||''));
@@ -534,7 +534,7 @@ function trendHTML(){
   h+='</div>';
   // グラフ
   var W=340,H=200,L=6,R=W-40,T=10,Bm=H-22,mx=Math.max(budget,spent,prev.length?prev[prev.length-1]:0,1);
-  var st=trStep(mx*1.08),top=Math.ceil(mx*1.08/st)*st;
+  var st=trStep(mx*1.03),top=Math.ceil(mx*1.03/st)*st;
   var X=function(d){return L+d/days*(R-L);},Y=function(v){return Bm-v/top*(Bm-T);};
   var g='<svg class="trsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc((all?'支出':TRSEL)+'の推移。今月 '+yen(spent)+(budget>0?'、予算 '+yen(budget):''))+'">';
   var by=budget>0?Y(budget):-99;
