@@ -152,6 +152,7 @@ input,select{font:inherit;font-size:17px;color:var(--text);background:transparen
 .trleg{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-size:12px;color:var(--sub);margin-top:6px}
 .trleg i{display:inline-block;width:16px;height:0;border-top:2.5px solid var(--orange);vertical-align:middle;margin-right:4px}
 .trleg i.p{border-top:2.5px dotted var(--sub)}
+.trleg i.g{border-top:2px dashed var(--teal)}
 .shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .shead b{font-size:17px}
 .sp{width:56px}
@@ -527,6 +528,13 @@ function trendHTML(){
   var cur=trCum(C,TRSEL,today).map(function(v){return v+fix;}),prev=trCum(P,TRSEL,pdays).map(function(v){return v+pfix;});
   var budget=all?(Number(D.やりくり費)||0)+fix:(Number(categoryBudgets()[TRSEL])||0);
   var spent=cur[cur.length-1]||0,mo=Number(String(C.ym).slice(5));
+  // 目安線：先月の使い方の形（日ごとの累計÷先月の合計）に今月の予算をかけて、月末でちょうど予算になる線。全体は今月の固定費を1日目に置き、やりくり費の分だけを先月の形でのばす
+  var guide=[];
+  if(budget>0){
+    var PN=Number(P.日数)||0,pf=PN?trCum(P,TRSEL,PN):[],ptot=pf.length?pf[pf.length-1]:0,gb=all?Math.max(0,budget-fix):budget;
+    var cAt=function(k){return k<=0?0:pf[Math.min(k,PN)-1];};
+    for(var gd=1;gd<=days;gd++){var fr;if(ptot>0){var x=gd*PN/days,i0=Math.floor(x);fr=(cAt(i0)+(cAt(i0+1)-cAt(i0))*(x-i0))/ptot;}else fr=gd/days;guide.push((all?fix:0)+gb*fr);}
+  }
   h+='<div class="trhead"><div class="k">'+mo+'月1日〜'+mo+'月'+today+'日の'+(all?'支出':esc(TRSEL))+'</div>';
   h+='<div class="trbig">'+Math.round(spent).toLocaleString('ja-JP')+'<span class="u">円</span></div>';
   if(budget>0){var r=budget-spent;h+='<div class="trsub">'+(r>=0?'あと <b>'+Math.round(r).toLocaleString('ja-JP')+'</b> 円':'<span class="up"><b>'+Math.round(-r).toLocaleString('ja-JP')+'</b> 円 オーバー</span>')+' / '+Math.round(budget).toLocaleString('ja-JP')+' 円</div>';}
@@ -542,6 +550,7 @@ function trendHTML(){
   if(budget>0)g+='<line x1="'+L+'" x2="'+R+'" y1="'+by+'" y2="'+by+'" style="stroke:var(--sub);stroke-width:1.2"/><text x="'+(W-2)+'" y="'+(by+4)+'" text-anchor="end" style="fill:var(--text);font-weight:600">予算</text>';
   var pts=function(a){var s=X(0)+','+Y(0);a.forEach(function(v,i){s+=' '+X(i+1)+','+Y(v);});return s;};
   if(prev.length)g+='<polyline points="'+pts(prev)+'" style="fill:none;stroke:var(--sub);stroke-width:2.5;stroke-dasharray:1 5;stroke-linecap:round;stroke-linejoin:round;opacity:.9"/>';
+  if(guide.length)g+='<polyline points="'+pts(guide)+'" style="fill:none;stroke:var(--teal);stroke-width:2;stroke-dasharray:6 4;stroke-linejoin:round"/>';
   var over=budget>0&&spent>budget,col=over?'var(--red)':'var(--orange)';
   g+='<polygon points="'+pts(cur)+' '+X(today)+','+Y(0)+'" style="fill:'+col+';opacity:.2"/>';
   g+='<polyline points="'+pts(cur)+'" style="fill:none;stroke:'+col+';stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round"/>';
@@ -550,9 +559,11 @@ function trendHTML(){
   g+='</svg>';
   h+=g;
   var pm=Number(String(P.ym||'').slice(5))||'',pd=Math.min(today,pdays),pv=pd?prev[pd-1]:null;
-  h+='<div class="trleg"><span><i></i>今月　<i class="p"></i>先月'+(pm?'（'+pm+'月）':'')+'</span>';
+  h+='<div class="trleg"><span><i></i>今月　<i class="p"></i>先月'+(pm?'（'+pm+'月）':'')+(guide.length?'　<i class="g"></i>目安':'')+'</span>';
   if(pv!=null){var c2=spent-pv;h+='<span>先月の'+pd+'日まで '+yen(pv)+'　<b class="'+(c2>0?'up':'down')+'">'+sgn(c2)+yen(Math.abs(c2))+'</b></span>';}
+  if(guide.length){var gv=guide[today-1],c3=spent-gv;h+='<span>目安の'+today+'日まで '+yen(gv)+'　<b class="'+(c3>0?'up':'down')+'">'+sgn(c3)+yen(Math.abs(c3))+'</b></span>';}
   h+='</div>';
+  if(guide.length)h+='<div class="tiny" style="margin-top:6px">目安＝先月と同じペースの使い方で、月末にちょうど予算になる線</div>';
   if(all)h+='<div class="tiny" style="margin-top:6px">固定費（今月 '+yen(fix)+'・先月 '+yen(pfix)+'）は1日目にまとめて入れています。特別費と口座の移動は入れていません</div>';
   else h+='<div class="tiny" style="margin-top:6px">やりくり費だけを集計しています'+(TRSEL==='食費'?'（食料品・外食・コンビニの合計）':'')+'</div>';
   return h;
